@@ -37,7 +37,7 @@ func TestGetGitlabProjectPath(t *testing.T) {
 	}
 }
 
-func TestGetNotDeletableReleaseTags(t *testing.T) {
+func TestGetNotDeletableReleaseTagsFrequent(t *testing.T) {
 	t.Parallel()
 
 	tags := make(map[string]types.TagType)
@@ -65,6 +65,32 @@ func TestGetNotDeletableReleaseTags(t *testing.T) {
 		"release-20220319-patch2",
 		"release-20220318-test",
 		"release-20220311",
+	}
+
+	sort.Strings(need)
+	sort.Strings(result)
+
+	if !reflect.DeepEqual(result, need) {
+		t.Fatalf("tags not equals result=%v", result)
+	}
+}
+
+func TestGetNotDeletableReleaseTagsRare(t *testing.T) {
+	t.Parallel()
+
+	tags := make(map[string]types.TagType)
+
+	tags["release-20220320"] = types.ReleaseTag
+	tags["release-20220219"] = types.ReleaseTag
+	tags["release-20220118"] = types.ReleaseTag
+	tags["release-20211217"] = types.ReleaseTag
+
+	result := internal.GetNotDeletableReleaseTags(tags)
+
+	need := []string{
+		"release-20220320",
+		"release-20220219",
+		"release-20220118",
 	}
 
 	sort.Strings(need)
