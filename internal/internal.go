@@ -17,6 +17,7 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"sort"
 	"strings"
 	"time"
 
@@ -36,6 +37,7 @@ const (
 	ignoreRepositoryPattern = `^devops/docker$`
 	hoursInDay              = 24
 	releaseNotDeleteDays    = 10
+	minNotDeleteReleaseTags = 3
 )
 
 var (
@@ -181,7 +183,7 @@ func GetGitlabProjectPath(dockerRegistryPath string) string {
 }
 
 // Detect stale release tag.
-func GetNotDeletableReleaseTags(projectAllDockerTags map[string]types.TagType) []string {
+func GetNotDeletableReleaseTags(projectAllDockerTags map[string]types.TagType) []string { //nolint:funlen,cyclop
 	tagsNotToDelete := make([]string, 0)
 	allReleaseTags := make([]string, 0)
 	releaseMaxDate := time.Time{}
@@ -210,6 +212,8 @@ func GetNotDeletableReleaseTags(projectAllDockerTags map[string]types.TagType) [
 		}
 	}
 
+	sort.Sort(sort.Reverse(sort.StringSlice(allReleaseTags)))
+
 	// Detect days between tag and maxrelease date
 	// if diff > 10 days - tag will be removed
 	for _, tag := range allReleaseTags {
@@ -227,6 +231,20 @@ func GetNotDeletableReleaseTags(projectAllDockerTags map[string]types.TagType) [
 		if releaseDateDiffDays < releaseNotDeleteDays {
 			tagsNotToDelete = append(tagsNotToDelete, tag)
 		}
+	}
+
+	// leave last 3 tags if final tagsNotToDelete is less of this amount
+	if len(tagsNotToDelete) < minNotDeleteReleaseTags {
+		latestTags := make([]string, 0)
+		for i := 0; i < len(allReleaseTags); i++ {
+			latestTags = append(latestTags, allReleaseTags[i])
+
+			if (len(latestTags)) >= minNotDeleteReleaseTags {
+				break
+			}
+		}
+
+		tagsNotToDelete = latestTags
 	}
 
 	return tagsNotToDelete
