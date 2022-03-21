@@ -1,6 +1,6 @@
 module github.com/paskal-maksim/gitlab-registry-cleaner
 
-go 1.17
+go 1.18
 
 require (
 	github.com/heroku/docker-registry-client v0.0.0-20211012143308-9463674c8930
