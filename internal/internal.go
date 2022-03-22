@@ -33,7 +33,7 @@ var provider = flag.String("provider", "local", "")
 
 const (
 	releaseTagPattern       = `^release-(\d{4}\d{2}\d{2}).*$`
-	systemTagPattern        = `^main$|^master$|^v\d+-\d+-\d+$`
+	systemTagPattern        = `^main$|^master$`
 	ignoreRepositoryPattern = `^devops/docker$`
 	hoursInDay              = 24
 	releaseNotDeleteDays    = 10
