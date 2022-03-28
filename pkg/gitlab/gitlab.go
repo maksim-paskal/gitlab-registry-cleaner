@@ -64,6 +64,8 @@ func GetProjectBranches(projectID int) (map[string]bool, error) {
 	currentPage := 0
 
 	for {
+		currentPage++
+
 		gitBranches, _, err := git.Branches.ListBranches(projectID, &gitlab.ListBranchesOptions{
 			ListOptions: gitlab.ListOptions{
 				Page:    currentPage,
@@ -73,8 +75,6 @@ func GetProjectBranches(projectID int) (map[string]bool, error) {
 		if err != nil {
 			return nil, errors.Wrap(err, "can not list branches")
 		}
-
-		currentPage++
 
 		if len(gitBranches) == 0 {
 			break
