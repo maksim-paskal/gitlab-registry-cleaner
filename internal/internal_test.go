@@ -26,13 +26,31 @@ func TestGetGitlabProjectPath(t *testing.T) {
 
 	tests := make(map[string]string)
 
-	tests["/test/test/test"] = "/test/test"
-	tests["/test/test"] = "/test"
-	tests["/#@/#@"] = "/#@"
+	tests["test/test/test/test"] = "test/test/test"
+	tests["test/test/test"] = "test/test"
+	tests["#@/#@/&&"] = "#@/#@"
 
 	for in, out := range tests {
-		if result := internal.GetGitlabProjectPath(in); result != out {
+		result, err := internal.GetGitlabProjectPath(in)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		if result != out {
 			t.Fatalf("result %s need %s", result, out)
+		}
+	}
+
+	testsToFail := []string{
+		"test",
+		"test/test",
+		"test/test:test",
+	}
+
+	for _, test := range testsToFail {
+		_, err := internal.GetGitlabProjectPath(test)
+		if err == nil {
+			t.Fatal("must throw error")
 		}
 	}
 }

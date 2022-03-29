@@ -1,4 +1,4 @@
 /deploy*
-/cleanOldTags.sh
 /dist
 /gitlab-registry-cleaner
+coverage.out
