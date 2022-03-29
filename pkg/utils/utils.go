@@ -17,7 +17,13 @@ import (
 	"strings"
 )
 
+const maxGitlabSluglifyLength = 63
+
 // implement sluglify function in gitlab
+// * Lowercased
+// * Anything not matching [a-z0-9-] is replaced with a -
+// * Maximum length is 63 bytes
+// * First/Last Character is not a hyphen
 // https://gitlab.com/gitlab-org/gitlab/-/blob/master/lib/gitlab/utils.rb#L92
 func GitlabSluglify(text string) string {
 	result := strings.ToLower(text)
@@ -29,5 +35,19 @@ func GitlabSluglify(text string) string {
 	result = strings.TrimPrefix(result, "-")
 	result = strings.TrimSuffix(result, "-")
 
+	if len(result) > maxGitlabSluglifyLength {
+		result = result[0:maxGitlabSluglifyLength]
+	}
+
 	return result
+}
+
+func StringInSlice(str string, list []string) bool {
+	for _, v := range list {
+		if v == str {
+			return true
+		}
+	}
+
+	return false
 }

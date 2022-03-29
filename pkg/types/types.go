@@ -14,6 +14,25 @@ package types
 
 type TagType uint32
 
+func (t TagType) String() string {
+	switch t {
+	case CanNotDelete:
+		return "CanNotDelete"
+	case BranchNotFound:
+		return "BranchNotFound"
+	case ReleaseTagCanNotDelete:
+		return "ReleaseTagCanNotDelete"
+	case ReleaseTag:
+		return "ReleaseTag"
+	case SystemTag:
+		return "SystemTag"
+	case BranchStale:
+		return "BranchStale"
+	}
+
+	return "unknown"
+}
+
 const (
 	CanNotDelete TagType = iota
 	BranchNotFound

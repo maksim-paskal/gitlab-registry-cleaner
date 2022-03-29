@@ -20,7 +20,6 @@ find_files() {
   find . -not \( \
     \( \
       -wholename './vendor' \
-      -o -wholename './cleanOldTags.sh' \
       -o -wholename './deploy-*' \
       -o -wholename '*testdata*' \
       -o -wholename '*third_party*' \
