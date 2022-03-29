@@ -4,8 +4,6 @@ ADD https://downloads.rclone.org/v1.51.0/rclone-v1.51.0-linux-amd64.zip /tmp/rcl
 
 WORKDIR /app/
 
-COPY ./gitlab-registry-cleaner /app/gitlab-registry-cleaner
-
 # rclone params for cleanOldTags
 ENV RCLONE_CONFIG_S3_TYPE=s3
 ENV RCLONE_CONFIG_S3_PROVIDER=AWS
@@ -30,6 +28,8 @@ RUN apk upgrade \
 && adduser -u 101 -D -S -G app app \
 && chown -R 101:101 /app \
 && rm -rf /tmp/*
+
+COPY --chown=101:101 ./gitlab-registry-cleaner /app/gitlab-registry-cleaner
 
 USER 101
 

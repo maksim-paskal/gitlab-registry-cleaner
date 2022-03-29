@@ -19,12 +19,12 @@ services:
     - |
       set -ex
 
+      # copy from object storage to local disk
+      rclone --quiet sync s3:s3-bucket /var/lib/registry
+
       # run registry in background
       registry serve /etc/docker/registry/config.yml&
       sleep 3
-
-      # copy from object storage to local disk
-      rclone --quiet sync s3:s3-bucket /var/lib/registry
 
       # manual remove stale registry
       #rm -rf /var/lib/registry/docker/registry/v2/repositories/some-group/some-project
@@ -34,9 +34,6 @@ services:
 
       # detect stale docker registry tags 
       /app/gitlab-registry-cleaner
-
-      # clean all tags folder
-      cat cleanOldTags.sh | sh
 
       # clean garbage in registry
       registry garbage-collect --delete-untagged /etc/docker/registry/config.yml

@@ -21,32 +21,40 @@ import (
 	"strings"
 	"time"
 
-	utilsgo "github.com/maksim-paskal/utils-go"
 	"github.com/paskal-maksim/gitlab-registry-cleaner/pkg/gitlab"
-	"github.com/paskal-maksim/gitlab-registry-cleaner/pkg/providers"
+	"github.com/paskal-maksim/gitlab-registry-cleaner/pkg/metrics"
+	"github.com/paskal-maksim/gitlab-registry-cleaner/pkg/providers/docker"
 	"github.com/paskal-maksim/gitlab-registry-cleaner/pkg/types"
+	"github.com/paskal-maksim/gitlab-registry-cleaner/pkg/utils"
 	"github.com/pkg/errors"
+	dto "github.com/prometheus/client_model/go"
 	log "github.com/sirupsen/logrus"
 )
 
-var provider = flag.String("provider", "local", "")
-
 const (
-	releaseTagPattern       = `^release-(\d{4}\d{2}\d{2}).*$`
-	systemTagPattern        = `^main$|^master$`
-	ignoreRepositoryPattern = `^devops/docker$`
-	hoursInDay              = 24
-	releaseNotDeleteDays    = 10
-	minNotDeleteReleaseTags = 3
+	hoursInDay                     = 24
+	defaultReleaseNotDeleteDays    = 10
+	defaultMinNotDeleteReleaseTags = 3
+	slashesInDockerRegistryPath    = 3
 )
 
 var (
-	releaseTagRegexp       = regexp.MustCompile(releaseTagPattern)
-	systemTagRegexp        = regexp.MustCompile(systemTagPattern)
-	ignoreRepositoryRegexp = regexp.MustCompile(ignoreRepositoryPattern)
+	provider                = flag.String("provider", "docker", "")
+	dryRun                  = flag.Bool("dry-run", false, "")
+	releaseTagPattern       = flag.String("release.tag", `^release-(\d{4}\d{2}\d{2}).*$`, "")
+	systemTagPattern        = flag.String("system.tag", `^main$|^master$`, "")
+	ignoreRepositoryPattern = flag.String("ignoreTags", `^devops/docker$`, "")
+	releaseNotDeleteDays    = flag.Float64("release.daysNotDelete", defaultReleaseNotDeleteDays, "")
+	minNotDeleteReleaseTags = flag.Int("release.minTags", defaultMinNotDeleteReleaseTags, "")
 )
 
-func CleanOldTags() error { //nolint:funlen,gocognit,cyclop
+var (
+	releaseTagRegexp       = regexp.MustCompile(*releaseTagPattern)
+	systemTagRegexp        = regexp.MustCompile(*systemTagPattern)
+	ignoreRepositoryRegexp = regexp.MustCompile(*ignoreRepositoryPattern)
+)
+
+func Run() error { //nolint:funlen,gocognit,cyclop
 	// Login to gitlab
 	if err := gitlab.Init(); err != nil {
 		log.Fatal(err)
@@ -55,8 +63,8 @@ func CleanOldTags() error { //nolint:funlen,gocognit,cyclop
 	var registry types.Provider
 
 	switch *provider {
-	case "local":
-		registry = &providers.LocalRegistry{}
+	case "docker":
+		registry = &docker.Provider{}
 	default:
 		return errors.Errorf("%s unknown provider", *provider)
 	}
@@ -79,7 +87,13 @@ func CleanOldTags() error { //nolint:funlen,gocognit,cyclop
 	// Convert docker path to gitlab project path
 	for _, repo := range repositories {
 		log.Debug("docker repositories", repo)
-		gitlabProjectPath := GetGitlabProjectPath(repo)
+
+		gitlabProjectPath, err := GetGitlabProjectPath(repo)
+		if err != nil {
+			log.Warn(err)
+
+			continue
+		}
 
 		// ignore some projects
 		if ignoreRepositoryRegexp.MatchString(gitlabProjectPath) {
@@ -133,7 +147,7 @@ func CleanOldTags() error { //nolint:funlen,gocognit,cyclop
 			}
 
 			if releaseTagRegexp.MatchString(projectAllDockerTag) {
-				if utilsgo.StringInSlice(projectAllDockerTag, tagsNotToDelete) {
+				if utils.StringInSlice(projectAllDockerTag, tagsNotToDelete) {
 					tagType = types.ReleaseTagCanNotDelete
 				} else {
 					tagType = types.ReleaseTag
@@ -154,11 +168,19 @@ func CleanOldTags() error { //nolint:funlen,gocognit,cyclop
 				tagType := projectAllDockerTags[dockerTag]
 
 				if tagType == types.ReleaseTag || tagType == types.BranchNotFound || tagType == types.BranchStale {
+					if *dryRun {
+						log.Infof("Not deleting tag, dry-run mode, image=%s:%s reason=%s", dockerRepo, dockerTag, tagType.String())
+
+						continue
+					}
+
 					// tags will be removed
 					err := registry.DeleteTag(dockerRepo, dockerTag, tagType)
 					if err != nil {
 						return errors.Wrap(err, "can not delete tag")
 					}
+
+					metrics.TagsDeleted.Inc()
 				}
 			}
 		}
@@ -169,17 +191,36 @@ func CleanOldTags() error { //nolint:funlen,gocognit,cyclop
 		return errors.Wrap(err, "can not process post command")
 	}
 
+	tagsDeleted := &dto.Metric{}
+	if err := metrics.TagsDeleted.Write(tagsDeleted); err != nil {
+		return errors.Wrap(err, "can not get current deleted tags")
+	}
+
+	log.Infof("tags deleted %s", tagsDeleted.Counter.String())
+
+	metrics.CompletionTime.SetToCurrentTime()
+
+	// send metrics to pushgateway
+	if err := metrics.Push(); err != nil {
+		return errors.Wrap(err, "can not process metrics push")
+	}
+
 	return nil
 }
 
 // Convert docker registry path to gitlab path.
-func GetGitlabProjectPath(dockerRegistryPath string) string {
+func GetGitlabProjectPath(dockerRegistryPath string) (string, error) {
 	pathGroups := strings.Split(dockerRegistryPath, "/")
+
+	if len(pathGroups) < slashesInDockerRegistryPath {
+		return "", errors.Errorf("path %s must contain group/project/image path", dockerRegistryPath)
+	}
+
 	if len(pathGroups) > 0 {
 		pathGroups = pathGroups[:len(pathGroups)-1]
 	}
 
-	return strings.Join(pathGroups, "/")
+	return strings.Join(pathGroups, "/"), nil
 }
 
 // Detect stale release tag.
@@ -228,18 +269,18 @@ func GetNotDeletableReleaseTags(projectAllDockerTags map[string]types.TagType) [
 
 		log.Debugf("%s, datediff=%f", tag, releaseDateDiffDays)
 
-		if releaseDateDiffDays < releaseNotDeleteDays {
+		if releaseDateDiffDays < *releaseNotDeleteDays {
 			tagsNotToDelete = append(tagsNotToDelete, tag)
 		}
 	}
 
 	// leave last 3 tags if final tagsNotToDelete is less of this amount
-	if len(tagsNotToDelete) < minNotDeleteReleaseTags {
+	if len(tagsNotToDelete) < *minNotDeleteReleaseTags {
 		latestTags := make([]string, 0)
 		for i := 0; i < len(allReleaseTags); i++ {
 			latestTags = append(latestTags, allReleaseTags[i])
 
-			if (len(latestTags)) >= minNotDeleteReleaseTags {
+			if (len(latestTags)) >= *minNotDeleteReleaseTags {
 				break
 			}
 		}

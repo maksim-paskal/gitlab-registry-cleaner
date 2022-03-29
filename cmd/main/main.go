@@ -33,6 +33,8 @@ func main() {
 	log.SetLevel(logLevel)
 	log.SetReportCaller(true)
 
+	log.SetFormatter(&log.JSONFormatter{})
+
 	hookSentry, err := logrushooksentry.NewHook(logrushooksentry.Options{
 		Release: internal.GetVersion(),
 	})
@@ -43,7 +45,7 @@ func main() {
 	log.AddHook(hookSentry)
 	defer hookSentry.Stop()
 
-	if err := internal.CleanOldTags(); err != nil {
-		log.Error(err)
+	if err := internal.Run(); err != nil {
+		log.WithError(err).Fatal()
 	}
 }
