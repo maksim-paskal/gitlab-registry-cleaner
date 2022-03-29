@@ -1,4 +1,0 @@
-apiVersion: v2
-icon: https://helm.sh/img/helm.svg
-name: gitlab-registry-cleaner
-version: v0.0.1
