@@ -4,6 +4,45 @@
 
 With DevOps practices, docker registry growing fast with developing new features. Need some tool to purge stale docker registry tags in docker repository.
 
+# Installation
+
+create custom [values.yaml](charts/gitlab-registry-cleaner/values.yaml) for example
+
+```yaml
+env:
+- name: GITLAB_TOKEN
+  value: sometoken
+- name: GITLAB_URL
+  value: https://git.lab/api/v4
+- name: REMOTE_REGISTRY
+  value: "https://someregistry.azurecr.io"
+- name: REMOTE_REGISTRY_USER
+  value: "someuser"
+- name: REMOTE_REGISTRY_PASSWORD
+  value: "sometoken"
+
+args:
+- -metrics.pushgateway=http://prometheus-pushgateway.prometheus.svc.cluster.local:9091
+
+tolerations:
+- key: "kubernetes.azure.com/scalesetpriority"
+  operator: "Equal"
+  value: "spot"
+  effect: "NoSchedule"
+```
+
+```bash
+helm repo add maksim-paskal-gitlab-registry-cleaner https://maksim-paskal.github.io/gitlab-registry-cleaner
+helm repo update
+
+helm upgrade gitlab-registry-cleaner \
+--install \
+--create-namespace \
+--namespace gitlab-registry-cleaner \
+maksim-paskal-gitlab-registry-cleaner/gitlab-registry-cleaner \
+--values values.yaml
+```
+
 ## Requirements
 
 All docker registry artifacts must contains the path of Gitlab project and sluglify tag of git branch or git tag
@@ -47,6 +86,3 @@ release-20220221 # will be removed
 
 2. If docker registry tag exists and there if no git tag (branch was merged to main branch) - docker tag will be removed
 
-## Installation
-
-Simple way to start using this tool [docker-compose](examples/local-registry/docker-compose.yaml) - in this example will be copy your docker registry files from S3 bucket (it can be modify to you object store with [documentation](https://rclone.org)) to local SSD disk (this needed for pour performance of garbage-collector in object store) clearing and pushing back to S3
