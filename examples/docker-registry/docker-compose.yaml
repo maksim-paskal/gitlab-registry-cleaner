@@ -14,7 +14,6 @@ services:
     - SENTRY_ENVIRONMENT=gitlab-registry-cleaner
     - SENTRY_DSN=https://id@sentry.my.org
     - REGISTRY_STORAGE_DELETE_ENABLED=true
-    - REGISTRY_URL=http://127.0.0.1:5000
     entrypoint:
     - /bin/sh
     - -c

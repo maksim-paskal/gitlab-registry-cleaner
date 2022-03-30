@@ -29,7 +29,7 @@ import (
 
 var (
 	registryWait     = flag.Bool("registry-wait", false, "")
-	registryURL      = flag.String("registry.url", os.Getenv("REGISTRY_URL"), "format https://registry.com")
+	registryURL      = flag.String("registry.url", utils.GetEnv("REGISTRY_URL", "http://127.0.0.1:5000"), "format https://registry.com") //nolint:lll
 	registryLogin    = flag.String("registry.username", os.Getenv("REGISTRY_USERNAME"), "")
 	registryPassword = flag.String("registry.password", os.Getenv("REGISTRY_PASSWORD"), "")
 )
@@ -102,8 +102,6 @@ func (p *Provider) Tags(repository string) ([]string, error) {
 
 // Delete tag.
 func (p *Provider) DeleteTag(repository string, tag string, tagType types.TagType) error {
-	log.Infof("deleting %s:%s", repository, tag)
-
 	digest, err := p.manifestDigest(repository, tag)
 	if err != nil {
 		return errors.Wrap(err, "can not get digest")
