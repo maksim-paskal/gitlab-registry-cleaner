@@ -244,7 +244,7 @@ func GetGitlabProjectPath(dockerRegistryPath string) (string, error) {
 }
 
 // Detect stale release tag.
-func GetNotDeletableReleaseTags(projectAllDockerTags map[string]types.TagType) []string { //nolint:funlen,cyclop
+func GetNotDeletableReleaseTags(projectAllDockerTags map[string]types.TagType) []string { //nolint:cyclop
 	tagsNotToDelete := make([]string, 0)
 	allReleaseTags := make([]string, 0)
 	releaseMaxDate := time.Time{}
@@ -278,12 +278,7 @@ func GetNotDeletableReleaseTags(projectAllDockerTags map[string]types.TagType) [
 	// Detect days between tag and maxrelease date
 	// if diff > 10 days - tag will be removed
 	for _, tag := range allReleaseTags {
-		releaseDate, err := time.Parse("20060102", releaseTagRegexp.FindStringSubmatch(tag)[1])
-		if err != nil {
-			log.WithError(err).Error()
-
-			continue
-		}
+		releaseDate, _ := time.Parse("20060102", releaseTagRegexp.FindStringSubmatch(tag)[1])
 
 		releaseDateDiffDays := releaseMaxDate.Sub(releaseDate).Hours() / hoursInDay
 

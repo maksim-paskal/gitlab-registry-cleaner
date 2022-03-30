@@ -118,3 +118,11 @@ func TestGetNotDeletableReleaseTagsRare(t *testing.T) {
 		t.Fatalf("tags not equals result=%v", result)
 	}
 }
+
+func TestVersion(t *testing.T) {
+	t.Parallel()
+
+	if version := internal.GetVersion(); version != "dev" {
+		t.Fatalf("version %s is incorrect", version)
+	}
+}
