@@ -65,3 +65,15 @@ func TestFormatUrl(t *testing.T) {
 		}
 	}
 }
+
+func TestGetEnv(t *testing.T) { //nolint:paralleltest
+	t.Setenv("TEST_ENV", "test")
+
+	if utils.GetEnv("TEST_ENV", "fake") != "test" {
+		t.Fatal("GetEnv must return env")
+	}
+
+	if utils.GetEnv("TEST_ENV_FAKE", "fake") != "fake" {
+		t.Fatal("GetEnv must return fallback")
+	}
+}

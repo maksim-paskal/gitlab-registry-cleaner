@@ -1,0 +1,50 @@
+{{ if .Values.registry.enabled }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: registry
+  labels:
+    app: registry
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: registry
+  template:
+    metadata:
+      labels:
+        app: registry
+    spec:
+{{ if .Values.registry.tolerations }}
+      tolerations:
+{{ toYaml .Values.registry.tolerations | indent 6 }}
+{{ end }}
+      containers:
+      - name: registry
+        image: {{ .Values.registry.image }}
+        imagePullPolicy: {{ .Values.registry.imagePullPolicy }}
+        resources:
+{{ toYaml .Values.registry.resources | indent 10 }}
+{{ if .Values.registry.env }}
+        env:
+        - name: REGISTRY_HTTP_ADDR
+          value: :{{ .Values.registry.port }}
+        - name: REGISTRY_HTTP_SECRET
+          value: {{ .Values.registry.secret | quote }}
+        - name: REGISTRY_STORAGE_DELETE_ENABLED
+          value: "true"
+{{ toYaml .Values.registry.env | indent 8 }}
+{{ end }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: registry
+spec:
+  selector:
+    app: registry
+  ports:
+    - protocol: TCP
+      port: {{ .Values.registry.port }}
+      targetPort: {{ .Values.registry.port }}
+{{ end }}

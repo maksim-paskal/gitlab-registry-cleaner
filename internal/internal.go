@@ -54,6 +54,7 @@ var (
 	ignoreRepositoryRegexp = regexp.MustCompile(*ignoreRepositoryPattern)
 )
 
+// Run main logic.
 func Run() error { //nolint:funlen,gocognit,cyclop,gocyclo
 	// Login to gitlab
 	if err := gitlab.Init(); err != nil {
@@ -170,18 +171,15 @@ func Run() error { //nolint:funlen,gocognit,cyclop,gocyclo
 
 				if tagType == types.ReleaseTag || tagType == types.BranchNotFound || tagType == types.BranchStale {
 					metrics.TagsDeleted.Inc()
+					log.Infof("delete image=%s:%s reason=%s", dockerRepo, dockerTag, tagType.String())
 
-					if *dryRun {
-						log.Infof("Not deleting tag, dry-run mode, image=%s:%s reason=%s", dockerRepo, dockerTag, tagType.String())
-
-						continue
-					}
-
-					// tags will be removed
-					err := registry.DeleteTag(dockerRepo, dockerTag, tagType)
-					if err != nil {
-						metrics.TagsErrors.Inc()
-						log.WithError(err).Error(dockerRepo, dockerTag, tagType)
+					if !*dryRun {
+						// tag will be removed
+						err := registry.DeleteTag(dockerRepo, dockerTag, tagType)
+						if err != nil {
+							metrics.TagsErrors.Inc()
+							log.WithError(err).Errorf("%s:%s reason=%s", dockerRepo, dockerTag, tagType.String())
+						}
 					}
 				}
 			}
@@ -213,6 +211,12 @@ func Run() error { //nolint:funlen,gocognit,cyclop,gocyclo
 		tagsWarnings.Counter.String(),
 		tagsErrors.Counter.String(),
 	)
+
+	if *dryRun {
+		log.Info("Dry-run mode, nothing was deleted")
+
+		return nil
+	}
 
 	metrics.CompletionTime.SetToCurrentTime()
 
@@ -309,6 +313,7 @@ func GetNotDeletableReleaseTags(projectAllDockerTags map[string]types.TagType) [
 
 var version = "dev"
 
+// Get application version.
 func GetVersion() string {
 	return version
 }

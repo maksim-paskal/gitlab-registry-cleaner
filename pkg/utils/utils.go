@@ -13,6 +13,7 @@ limitations under the License.
 package utils
 
 import (
+	"os"
 	"regexp"
 	"strings"
 )
@@ -56,4 +57,13 @@ func StringInSlice(str string, list []string) bool {
 // Remove right / symbol from url.
 func FormatURL(url string) string {
 	return strings.TrimRight(url, "/")
+}
+
+// Get env variable with default value.
+func GetEnv(key, fallback string) string {
+	if value, ok := os.LookupEnv(key); ok {
+		return value
+	}
+
+	return fallback
 }
