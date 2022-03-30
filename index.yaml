@@ -2,6 +2,14 @@ apiVersion: v1
 entries:
   gitlab-registry-cleaner:
   - apiVersion: v2
+    created: "2022-03-30T14:24:35.164513352Z"
+    digest: d5c614258d01f82e05a945c2d0c24a64340d0565ea159c5e996e69b039801668
+    icon: https://helm.sh/img/helm.svg
+    name: gitlab-registry-cleaner
+    urls:
+    - https://github.com/maksim-paskal/gitlab-registry-cleaner/releases/download/helm-chart-0.0.3/gitlab-registry-cleaner-0.0.3.tgz
+    version: 0.0.3
+  - apiVersion: v2
     created: "2022-03-30T13:48:06.077819212Z"
     digest: 1afdfa29aa988ca03306310b2415c17257d489caceb934b136c52d3fb957a505
     icon: https://helm.sh/img/helm.svg
