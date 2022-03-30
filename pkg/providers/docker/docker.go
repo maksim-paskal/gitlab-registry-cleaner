@@ -17,26 +17,63 @@ import (
 	"fmt"
 	"net/http"
 	"os"
+	"time"
 
 	"github.com/heroku/docker-registry-client/registry"
 	"github.com/opencontainers/go-digest"
 	"github.com/paskal-maksim/gitlab-registry-cleaner/pkg/types"
+	"github.com/paskal-maksim/gitlab-registry-cleaner/pkg/utils"
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
 )
 
 var (
+	registryWait     = flag.Bool("registry-wait", false, "")
 	registryURL      = flag.String("registry.url", os.Getenv("REGISTRY_URL"), "format https://registry.com")
 	registryLogin    = flag.String("registry.username", os.Getenv("REGISTRY_USERNAME"), "")
 	registryPassword = flag.String("registry.password", os.Getenv("REGISTRY_PASSWORD"), "")
+)
+
+const (
+	pingTimeout  = 5 * time.Second
+	waitInterval = 3 * time.Second
 )
 
 type Provider struct {
 	hub *registry.Registry
 }
 
+func (*Provider) pingRegistry() error {
+	client := &http.Client{
+		Timeout: pingTimeout,
+	}
+
+	url := fmt.Sprintf("%s/v2/", utils.FormatURL(*registryURL))
+
+	log.Infof("waiting for registry %s", url)
+
+	resp, err := client.Get(url)
+	if resp != nil {
+		defer resp.Body.Close()
+	}
+
+	if err != nil {
+		log.WithError(err).Debug()
+
+		return errors.Wrap(err, "error from ping")
+	}
+
+	return nil
+}
+
 // Create new client.
 func (p *Provider) Init() error {
+	if *registryWait {
+		for p.pingRegistry() != nil {
+			time.Sleep(waitInterval)
+		}
+	}
+
 	var err error
 
 	p.hub, err = registry.New(*registryURL, *registryLogin, *registryPassword)
@@ -90,7 +127,7 @@ func (p *Provider) PostCommand() error {
 // fix registry client header
 // https://github.com/heroku/docker-registry-client/pull/79
 func (p *Provider) manifestDigest(repository, reference string) (digest.Digest, error) {
-	url := fmt.Sprintf("%s/v2/%s/manifests/%s", *registryURL, repository, reference)
+	url := fmt.Sprintf("%s/v2/%s/manifests/%s", utils.FormatURL(*registryURL), repository, reference)
 
 	req, err := http.NewRequest("HEAD", url, nil)
 	if err != nil {

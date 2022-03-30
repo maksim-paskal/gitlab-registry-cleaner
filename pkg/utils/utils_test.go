@@ -48,3 +48,20 @@ func TestStringInSlice(t *testing.T) {
 		t.Fatal("String must contains in array")
 	}
 }
+
+func TestFormatUrl(t *testing.T) {
+	t.Parallel()
+
+	tests := make(map[string]string)
+
+	tests["http://127.0.0.1:5000/"] = "http://127.0.0.1:5000"
+	tests["https://test//"] = "https://test"
+
+	for in, out := range tests {
+		result := utils.FormatURL(in)
+
+		if result != out {
+			t.Fatalf("result %s need %s", result, out)
+		}
+	}
+}

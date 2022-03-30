@@ -42,6 +42,7 @@ func GitlabSluglify(text string) string {
 	return result
 }
 
+// Check for string in slice.
 func StringInSlice(str string, list []string) bool {
 	for _, v := range list {
 		if v == str {
@@ -50,4 +51,9 @@ func StringInSlice(str string, list []string) bool {
 	}
 
 	return false
+}
+
+// Remove right / symbol from url.
+func FormatURL(url string) string {
+	return strings.TrimRight(url, "/")
 }
