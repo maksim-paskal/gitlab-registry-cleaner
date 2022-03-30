@@ -4,7 +4,7 @@
 
 With DevOps practices, docker registry growing fast with developing new features. Need some tool to purge stale docker registry tags in docker repository.
 
-# Installation
+## Installation
 
 create custom [values.yaml](charts/gitlab-registry-cleaner/values.yaml) for example
 
@@ -14,12 +14,15 @@ env:
   value: sometoken
 - name: GITLAB_URL
   value: https://git.lab/api/v4
-- name: REMOTE_REGISTRY
+- name: REGISTRY_URL
   value: "https://someregistry.azurecr.io"
-- name: REMOTE_REGISTRY_USER
+- name: REGISTRY_USERNAME
   value: "someuser"
-- name: REMOTE_REGISTRY_PASSWORD
+- name: REGISTRY_PASSWORD
   value: "sometoken"
+# optional
+- name: SENTRY_DSN
+  value: "https://id@sentry/0"
 
 args:
 - -metrics.pushgateway=http://prometheus-pushgateway.prometheus.svc.cluster.local:9091
@@ -68,7 +71,7 @@ All git tags that use in stage/prod envieroment must be named with `release-YYYM
 
 Clearing docker tags will be peformed with this logic
 
-1. If docker registry have this release tags
+### 1. If docker registry have this release tags
 
 ```bash
 release-20220320
@@ -84,5 +87,4 @@ release-20220221 # will be removed
 
 `gitlab-registry-cleaner` will leave only last 10 day of release tags
 
-2. If docker registry tag exists and there if no git tag (branch was merged to main branch) - docker tag will be removed
-
+### 2. If docker registry tag exists and there if no git tag (branch was merged to main branch) - docker tag will be removed

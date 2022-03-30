@@ -26,9 +26,9 @@ import (
 )
 
 var (
-	registryURL      = flag.String("registry.url", os.Getenv("REMOTE_REGISTRY"), "format https://registry.com")
-	registryLogin    = flag.String("registry.username", os.Getenv("REMOTE_REGISTRY_USER"), "")
-	registryPassword = flag.String("registry.password", os.Getenv("REMOTE_REGISTRY_PASSWORD"), "")
+	registryURL      = flag.String("registry.url", os.Getenv("REGISTRY_URL"), "format https://registry.com")
+	registryLogin    = flag.String("registry.username", os.Getenv("REGISTRY_USERNAME"), "")
+	registryPassword = flag.String("registry.password", os.Getenv("REGISTRY_PASSWORD"), "")
 )
 
 type Provider struct {

@@ -20,7 +20,10 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-var logLevelConfig = flag.String("log.level", "INFO", "")
+var (
+	logLevelConfig = flag.String("log.level", "INFO", "")
+	logPretty      = flag.Bool("log.pretty", false, "")
+)
 
 func main() {
 	flag.Parse()
@@ -33,7 +36,11 @@ func main() {
 	log.SetLevel(logLevel)
 	log.SetReportCaller(true)
 
-	log.SetFormatter(&log.JSONFormatter{})
+	if *logPretty {
+		log.SetFormatter(&log.TextFormatter{})
+	} else {
+		log.SetFormatter(&log.JSONFormatter{})
+	}
 
 	hookSentry, err := logrushooksentry.NewHook(logrushooksentry.Options{
 		Release: internal.GetVersion(),
