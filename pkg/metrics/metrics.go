@@ -52,6 +52,7 @@ var TagsErrors = prometheus.NewCounter(prometheus.CounterOpts{
 	Help:      "Total tags with error",
 })
 
+// Push metrics to pushgateway.
 func Push() error {
 	if len(*pushGateWayURL) == 0 {
 		return nil

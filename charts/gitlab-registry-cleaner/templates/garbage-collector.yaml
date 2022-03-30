@@ -1,0 +1,35 @@
+{{ if .Values.garbageCollector.enabled }}
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: garbage-collector
+spec:
+  schedule: {{ .Values.garbageCollector.schedule | quote }}
+  jobTemplate:
+    spec:
+      template:
+        spec:
+{{ if .Values.garbageCollector.tolerations }}
+          tolerations:
+{{ toYaml .Values.garbageCollector.tolerations | indent 10 }}
+{{ end }}
+          containers:
+          - name: garbage-collector
+            image: {{ .Values.registry.image }}
+            imagePullPolicy: {{ .Values.registry.imagePullPolicy }}
+            resources:
+{{ toYaml .Values.garbageCollector.resources | indent 14 }}
+
+{{ if .Values.registry.env }}
+            env:
+{{ toYaml .Values.registry.env | indent 12 }}
+{{ end }}
+            command:
+            - registry
+            - garbage-collect
+            - --dry-run
+            - --delete-untagged
+            - /etc/docker/registry/config.yml
+          restartPolicy: Never
+      backoffLimit: 3
+{{ end }}

@@ -18,3 +18,39 @@ tolerations: []
 #   operator: "Equal"
 #   value: "spot"
 #   effect: "NoSchedule"
+
+garbageCollector:
+  enabled: false
+  schedule: "0 6 * * *"
+  tolerations: []
+  resources:
+    requests:
+      cpu: 100m
+      memory: 100Mi
+
+registry:
+  enabled: false
+  image: registry:2.7.1
+  imagePullPolicy: IfNotPresent
+  port: 5000
+  secret: M3u26yce98Py9Ebl0maAJubvpIZR5VD
+  resources:
+    requests:
+      cpu: 100m
+      memory: 100Mi
+  tolerations: []
+  # - key: "kubernetes.azure.com/scalesetpriority"
+  #   operator: "Equal"
+  #   value: "spot"
+  #   effect: "NoSchedule"
+  env: []
+  # - name: REGISTRY_STORAGE
+  #   value: s3
+  # - name: REGISTRY_STORAGE_S3_REGION
+  #   value: aws-region
+  # - name: REGISTRY_STORAGE_S3_BUCKET
+  #   value: aws-bucket
+  # - name: REGISTRY_STORAGE_S3_ACCESSKEY
+  #   value: aws-key
+  # - name: REGISTRY_STORAGE_S3_SECRETKEY
+  #   value: aws-secret
