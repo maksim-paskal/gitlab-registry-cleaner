@@ -1,4 +1,4 @@
-image: paskalmaksim/gitlab-registry-cleaner:dev
+image: paskalmaksim/gitlab-registry-cleaner:latest
 imagePullPolicy: Always
 
 resources:
@@ -6,7 +6,7 @@ resources:
     cpu: 100m
     memory: 100Mi
 
-schedule: "0 5 * * *"
+schedule: "0 0 * * *"
 
 args: []
 # - -metrics.pushgateway=http://prometheus-pushgateway.prometheus.svc.cluster.local:9091
@@ -21,7 +21,7 @@ tolerations: []
 
 garbageCollector:
   enabled: false
-  schedule: "0 6 * * *"
+  schedule: "0 1 * * *"
   tolerations: []
   resources:
     requests:
