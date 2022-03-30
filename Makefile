@@ -1,5 +1,5 @@
 tag=dev
-image=paskalmaksim/gitlab-registry-cleaner:dev
+image=paskalmaksim/gitlab-registry-cleaner:$(tag)
 
 test:
 	./scripts/validate-license.sh

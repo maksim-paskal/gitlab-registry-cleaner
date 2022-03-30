@@ -90,7 +90,7 @@ func Run() error { //nolint:funlen,gocognit,cyclop,gocyclo
 
 		gitlabProjectPath, err := GetGitlabProjectPath(repo)
 		if err != nil {
-			log.Warn(err)
+			log.WithError(err).Warn()
 			metrics.TagsWarnings.Inc()
 
 			continue
@@ -113,7 +113,7 @@ func Run() error { //nolint:funlen,gocognit,cyclop,gocyclo
 	for gitlabRepo, dockerRepos := range gitlabProjects {
 		gitlabProjectID, err := gitlab.GetProjectID(gitlabRepo)
 		if err != nil {
-			log.Error(errors.Wrap(err, gitlabRepo))
+			log.WithError(err).Error(gitlabRepo)
 
 			continue
 		}
@@ -169,6 +169,8 @@ func Run() error { //nolint:funlen,gocognit,cyclop,gocyclo
 				tagType := projectAllDockerTags[dockerTag]
 
 				if tagType == types.ReleaseTag || tagType == types.BranchNotFound || tagType == types.BranchStale {
+					metrics.TagsDeleted.Inc()
+
 					if *dryRun {
 						log.Infof("Not deleting tag, dry-run mode, image=%s:%s reason=%s", dockerRepo, dockerTag, tagType.String())
 
@@ -178,10 +180,9 @@ func Run() error { //nolint:funlen,gocognit,cyclop,gocyclo
 					// tags will be removed
 					err := registry.DeleteTag(dockerRepo, dockerTag, tagType)
 					if err != nil {
-						return errors.Wrap(err, "can not delete tag")
+						metrics.TagsErrors.Inc()
+						log.WithError(err).Error(dockerRepo, dockerTag, tagType)
 					}
-
-					metrics.TagsDeleted.Inc()
 				}
 			}
 		}
@@ -202,7 +203,16 @@ func Run() error { //nolint:funlen,gocognit,cyclop,gocyclo
 		return errors.Wrap(err, "can not get current warnings tags")
 	}
 
-	log.Infof("tags deleted %s warnings %s", tagsDeleted.Counter.String(), tagsWarnings.Counter.String())
+	tagsErrors := &dto.Metric{}
+	if err := metrics.TagsErrors.Write(tagsErrors); err != nil {
+		return errors.Wrap(err, "can not get current errors tags")
+	}
+
+	log.Infof("tags deleted %s warnings %s errors %s",
+		tagsDeleted.Counter.String(),
+		tagsWarnings.Counter.String(),
+		tagsErrors.Counter.String(),
+	)
 
 	metrics.CompletionTime.SetToCurrentTime()
 
@@ -240,7 +250,7 @@ func GetNotDeletableReleaseTags(projectAllDockerTags map[string]types.TagType) [
 		if releaseTagRegexp.MatchString(projectAllDockerTag) {
 			releaseDate, err := time.Parse("20060102", releaseTagRegexp.FindStringSubmatch(projectAllDockerTag)[1])
 			if err != nil {
-				log.Error(err)
+				log.WithError(err).Error()
 
 				continue
 			}
@@ -266,7 +276,7 @@ func GetNotDeletableReleaseTags(projectAllDockerTags map[string]types.TagType) [
 	for _, tag := range allReleaseTags {
 		releaseDate, err := time.Parse("20060102", releaseTagRegexp.FindStringSubmatch(tag)[1])
 		if err != nil {
-			log.Error(err)
+			log.WithError(err).Error()
 
 			continue
 		}

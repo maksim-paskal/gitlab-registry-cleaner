@@ -46,6 +46,12 @@ var TagsWarnings = prometheus.NewCounter(prometheus.CounterOpts{
 	Help:      "Total tags with warning",
 })
 
+var TagsErrors = prometheus.NewCounter(prometheus.CounterOpts{
+	Namespace: namespace,
+	Name:      "tags_errors_total",
+	Help:      "Total tags with error",
+})
+
 func Push() error {
 	if len(*pushGateWayURL) == 0 {
 		return nil
@@ -57,6 +63,7 @@ func Push() error {
 		Collector(CompletionTime).
 		Collector(TagsDeleted).
 		Collector(TagsWarnings).
+		Collector(TagsErrors).
 		Push(); err != nil {
 		return errors.Wrap(err, "can not send metrics")
 	}
