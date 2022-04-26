@@ -28,5 +28,21 @@ spec:
             args:
 {{ toYaml .Values.args | indent 12 }}
 {{ end }}
+            {{ if .Values.registry.runInJob }}
+            command:
+            - sh
+            - -c
+            - |
+              set -ex
+
+              registry serve /etc/docker/registry/config.yml &
+
+              /app/gitlab-registry-cleaner \
+              {{- range .Values.args }}
+              {{ . }} \
+              {{- end }}
+              -registry-wait
+
+            {{ end }}
           restartPolicy: Never
       backoffLimit: 3
