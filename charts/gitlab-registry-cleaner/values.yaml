@@ -30,7 +30,8 @@ garbageCollector:
 
 registry:
   enabled: false
-  image: registry:2.7.1
+  runInJob: false  # Run registry in a job, this will not run additional pods with registry
+  image: registry:2.8.1
   imagePullPolicy: IfNotPresent
   port: 5000
   secret: M3u26yce98Py9Ebl0maAJubvpIZR5VD
