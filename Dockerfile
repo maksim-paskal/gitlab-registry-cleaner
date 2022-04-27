@@ -20,7 +20,7 @@ RUN apk upgrade \
 && mv rclone-v1.51.0-linux-amd64/rclone /usr/local/bin/rclone \
 && touch /tmp/checksum \
 && echo "410f8e70f9e11b1abf55c13335bdeb36edfce9a97c7bbe8c91fa5de6f22f6031  /usr/local/bin/rclone" >> /tmp/checksum \
-&& echo "d494c104bc9aa4b39dd473f086dbe0a5bdf370f1cb4a7b9bb2bd38b5e58bb106  /usr/local/bin/registry" >> /tmp/checksum \
+&& echo "c8193513993708671bb413b1db61e80afb10de9bb7024ea7ae874ff6250d9ca3  /usr/local/bin/registry" >> /tmp/checksum \
 && cat /tmp/checksum \
 && sha256sum -c /tmp/checksum \
 && rm /tmp/checksum \
