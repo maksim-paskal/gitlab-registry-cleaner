@@ -8,3 +8,4 @@ linters:
   - testpackage
   - exhaustivestruct
   - gochecknoglobals
+  - gomoddirectives
