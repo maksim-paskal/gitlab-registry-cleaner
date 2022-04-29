@@ -20,7 +20,6 @@ import (
 	"time"
 
 	"github.com/heroku/docker-registry-client/registry"
-	"github.com/opencontainers/go-digest"
 	"github.com/paskal-maksim/gitlab-registry-cleaner/pkg/types"
 	"github.com/paskal-maksim/gitlab-registry-cleaner/pkg/utils"
 	"github.com/pkg/errors"
@@ -81,7 +80,9 @@ func (p *Provider) Init() error {
 		return errors.Wrap(err, "can not connect to registry")
 	}
 
-	p.hub.Logf = registry.Quiet
+	if log.GetLevel() < log.DebugLevel {
+		p.hub.Logf = registry.Quiet
+	}
 
 	return nil
 }
@@ -102,7 +103,7 @@ func (p *Provider) Tags(repository string) ([]string, error) {
 
 // Delete tag.
 func (p *Provider) DeleteTag(repository string, tag string, tagType types.TagType) error {
-	digest, err := p.manifestDigest(repository, tag)
+	digest, err := p.hub.ManifestDigest(repository, tag)
 	if err != nil {
 		return errors.Wrap(err, "can not get digest")
 	}
@@ -120,33 +121,4 @@ func (p *Provider) PostCommand() error {
 	log.Infof("Done")
 
 	return nil
-}
-
-// fix registry client header
-// https://github.com/heroku/docker-registry-client/pull/79
-func (p *Provider) manifestDigest(repository, reference string) (digest.Digest, error) {
-	url := fmt.Sprintf("%s/v2/%s/manifests/%s", utils.FormatURL(*registryURL), repository, reference)
-
-	req, err := http.NewRequest("HEAD", url, nil)
-	if err != nil {
-		return "", errors.Wrap(err, "can not create request")
-	}
-
-	req.Header.Set("Accept", "application/vnd.docker.distribution.manifest.v2+json")
-
-	resp, err := p.hub.Client.Do(req)
-	if resp != nil {
-		defer resp.Body.Close()
-	}
-
-	if err != nil {
-		return "", errors.Wrap(err, "can not create Do")
-	}
-
-	d, err := digest.Parse(resp.Header.Get("Docker-Content-Digest"))
-	if err != nil {
-		return "", errors.Wrap(err, "can not parse header")
-	}
-
-	return d, nil
 }
