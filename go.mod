@@ -3,6 +3,7 @@ module github.com/paskal-maksim/gitlab-registry-cleaner
 go 1.18
 
 require (
+	github.com/aws/aws-sdk-go v1.44.3
 	github.com/heroku/docker-registry-client v0.0.0-20211012143308-9463674c8930
 	github.com/maksim-paskal/logrus-hook-sentry v0.0.9
 	github.com/pkg/errors v0.9.1
@@ -22,12 +23,13 @@ require (
 	github.com/google/go-querystring v1.1.0 // indirect
 	github.com/hashicorp/go-cleanhttp v0.5.1 // indirect
 	github.com/hashicorp/go-retryablehttp v0.6.8 // indirect
+	github.com/jmespath/go-jmespath v0.4.0 // indirect
 	github.com/matttproud/golang_protobuf_extensions v1.0.1 // indirect
 	github.com/opencontainers/go-digest v1.0.0 // indirect
 	github.com/prometheus/common v0.32.1 // indirect
 	github.com/prometheus/procfs v0.7.3 // indirect
 	github.com/stretchr/testify v1.7.0 // indirect
-	golang.org/x/net v0.0.0-20211112202133-69e39bad7dc2 // indirect
+	golang.org/x/net v0.0.0-20220127200216-cd36cc0744dd // indirect
 	golang.org/x/oauth2 v0.0.0-20210514164344-f6687ab2804c // indirect
 	golang.org/x/sys v0.0.0-20220422013727-9388b58f7150 // indirect
 	golang.org/x/time v0.0.0-20201208040808-7e3f01d25324 // indirect
