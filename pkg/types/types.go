@@ -44,7 +44,7 @@ const (
 
 type Provider interface {
 	// Initialize provider
-	Init() error
+	Init(dryRun bool) error
 	// List repositories in provider
 	Repositories() ([]string, error)
 	// List tags in provider

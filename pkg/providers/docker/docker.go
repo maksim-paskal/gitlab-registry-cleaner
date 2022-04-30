@@ -39,7 +39,8 @@ const (
 )
 
 type Provider struct {
-	hub *registry.Registry
+	dryRun bool
+	hub    *registry.Registry
 }
 
 func (*Provider) pingRegistry() error {
@@ -66,7 +67,9 @@ func (*Provider) pingRegistry() error {
 }
 
 // Create new client.
-func (p *Provider) Init() error {
+func (p *Provider) Init(dryRun bool) error {
+	p.dryRun = dryRun
+
 	if *registryWait {
 		for p.pingRegistry() != nil {
 			time.Sleep(waitInterval)
@@ -106,6 +109,12 @@ func (p *Provider) DeleteTag(repository string, tag string, tagType types.TagTyp
 	digest, err := p.hub.ManifestDigest(repository, tag)
 	if err != nil {
 		return errors.Wrap(err, "can not get digest")
+	}
+
+	if p.dryRun {
+		log.Warn("nothing to do, dry run")
+
+		return nil
 	}
 
 	err = p.hub.DeleteManifest(repository, digest)

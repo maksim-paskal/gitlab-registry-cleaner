@@ -24,6 +24,7 @@ import (
 	"github.com/paskal-maksim/gitlab-registry-cleaner/pkg/gitlab"
 	"github.com/paskal-maksim/gitlab-registry-cleaner/pkg/metrics"
 	"github.com/paskal-maksim/gitlab-registry-cleaner/pkg/providers/docker"
+	"github.com/paskal-maksim/gitlab-registry-cleaner/pkg/providers/s3"
 	"github.com/paskal-maksim/gitlab-registry-cleaner/pkg/types"
 	"github.com/paskal-maksim/gitlab-registry-cleaner/pkg/utils"
 	"github.com/pkg/errors"
@@ -66,6 +67,8 @@ func Run() error { //nolint:funlen,gocognit,cyclop,gocyclo
 	switch *provider {
 	case "docker":
 		registry = &docker.Provider{}
+	case "s3":
+		registry = &s3.Provider{}
 	default:
 		return errors.Errorf("%s unknown provider", *provider)
 	}
@@ -74,7 +77,7 @@ func Run() error { //nolint:funlen,gocognit,cyclop,gocyclo
 	log.Infof("Using %s provider...", *provider)
 
 	// Login to registry
-	if err := registry.Init(); err != nil {
+	if err := registry.Init(*dryRun); err != nil {
 		return errors.Wrap(err, "can not init registry")
 	}
 
@@ -173,13 +176,11 @@ func Run() error { //nolint:funlen,gocognit,cyclop,gocyclo
 					metrics.TagsDeleted.Inc()
 					log.Infof("delete image=%s:%s reason=%s", dockerRepo, dockerTag, tagType.String())
 
-					if !*dryRun {
-						// tag will be removed
-						err := registry.DeleteTag(dockerRepo, dockerTag, tagType)
-						if err != nil {
-							metrics.TagsErrors.Inc()
-							log.WithError(err).Errorf("%s:%s reason=%s", dockerRepo, dockerTag, tagType.String())
-						}
+					// tag will be removed
+					err := registry.DeleteTag(dockerRepo, dockerTag, tagType)
+					if err != nil {
+						metrics.TagsErrors.Inc()
+						log.WithError(err).Errorf("%s:%s reason=%s", dockerRepo, dockerTag, tagType.String())
 					}
 				}
 			}
@@ -211,12 +212,6 @@ func Run() error { //nolint:funlen,gocognit,cyclop,gocyclo
 		tagsWarnings.Counter.String(),
 		tagsErrors.Counter.String(),
 	)
-
-	if *dryRun {
-		log.Info("Dry-run mode, nothing was deleted")
-
-		return nil
-	}
 
 	metrics.CompletionTime.SetToCurrentTime()
 
