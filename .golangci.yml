@@ -7,5 +7,6 @@ linters:
   disable:
   - testpackage
   - exhaustivestruct
+  - exhaustruct
   - gochecknoglobals
   - gomoddirectives
