@@ -30,11 +30,14 @@ import (
 )
 
 var (
-	s3Region       = flag.String("s3.region", os.Getenv("S3_REGION"), "")
-	s3Accesskey    = flag.String("s3.accesskey", os.Getenv("S3_ACCESSKEY"), "")
-	s3Secretkey    = flag.String("s3.secretkey", os.Getenv("S3_SECRETKEY"), "")
-	s3Bucket       = flag.String("s3.bucket", os.Getenv("S3_BUCKET"), "")
-	registryFolder = flag.String("s3.registry-folder", "docker/registry/v2/repositories/", "")
+	s3Region         = flag.String("s3.region", os.Getenv("S3_REGION"), "")
+	s3Accesskey      = flag.String("s3.accesskey", os.Getenv("S3_ACCESSKEY"), "")
+	s3Secretkey      = flag.String("s3.secretkey", os.Getenv("S3_SECRETKEY"), "")
+	s3Bucket         = flag.String("s3.bucket", os.Getenv("S3_BUCKET"), "")
+	s3Endpoint       = flag.String("s3.endpoint", os.Getenv("S3_ENDPOINT"), "")
+	s3DisableSSL     = flag.String("s3.disable-ssl", os.Getenv("S3_DISABLE_SSL"), "")
+	s3ForcePathStyle = flag.String("s3.force-path-style", os.Getenv("S3_FORCE_PATH_STYLE"), "")
+	registryFolder   = flag.String("s3.registry-folder", "docker/registry/v2/repositories/", "")
 )
 
 const listMax = 1000
@@ -102,10 +105,24 @@ func (p *Provider) listRepository(folder string) error {
 func (p *Provider) Init(dryRun bool) error {
 	p.dryRun = dryRun
 
-	sess, err := session.NewSession(&aws.Config{
+	config := aws.Config{
 		Credentials: credentials.NewStaticCredentials(*s3Accesskey, *s3Secretkey, ""),
 		Region:      aws.String(*s3Region),
-	})
+	}
+
+	if len(*s3Endpoint) > 0 {
+		config.Endpoint = aws.String(*s3Endpoint)
+	}
+
+	if *s3DisableSSL == "true" {
+		config.DisableSSL = aws.Bool(true)
+	}
+
+	if *s3ForcePathStyle == "true" {
+		config.S3ForcePathStyle = aws.Bool(true)
+	}
+
+	sess, err := session.NewSession(&config)
 	if err != nil {
 		return errors.Wrap(err, "failed to create aws session")
 	}
