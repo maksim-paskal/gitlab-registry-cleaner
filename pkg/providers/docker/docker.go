@@ -13,6 +13,7 @@ limitations under the License.
 package docker
 
 import (
+	"context"
 	"flag"
 	"fmt"
 	"net/http"
@@ -43,7 +44,7 @@ type Provider struct {
 	hub    *registry.Registry
 }
 
-func (*Provider) pingRegistry() error {
+func (p *Provider) pingRegistry(ctx context.Context) error {
 	client := &http.Client{
 		Timeout: pingTimeout,
 	}
@@ -52,7 +53,12 @@ func (*Provider) pingRegistry() error {
 
 	log.Infof("waiting for registry %s", url)
 
-	resp, err := client.Get(url)
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
+	if err != nil {
+		return errors.Wrap(err, "error making request")
+	}
+
+	resp, err := client.Do(req)
 	if resp != nil {
 		defer resp.Body.Close()
 	}
@@ -70,8 +76,10 @@ func (*Provider) pingRegistry() error {
 func (p *Provider) Init(dryRun bool) error {
 	p.dryRun = dryRun
 
+	ctx := context.Background()
+
 	if *registryWait {
-		for p.pingRegistry() != nil {
+		for p.pingRegistry(ctx) != nil {
 			time.Sleep(waitInterval)
 		}
 	}

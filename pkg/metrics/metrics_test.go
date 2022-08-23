@@ -27,11 +27,11 @@ import (
 
 var pushGateWayServer = httptest.NewServer(http.HandlerFunc(func(writer http.ResponseWriter, req *http.Request) {
 	if err := checkPushGatewayResponse(req); err != nil {
-		writer.WriteHeader(500)
+		writer.WriteHeader(http.StatusInternalServerError)
 		log.WithError(err).Error()
 
 	} else {
-		writer.WriteHeader(200)
+		writer.WriteHeader(http.StatusOK)
 	}
 }))
 
