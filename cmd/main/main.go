@@ -17,6 +17,7 @@ import (
 
 	logrushooksentry "github.com/maksim-paskal/logrus-hook-sentry"
 	"github.com/paskal-maksim/gitlab-registry-cleaner/internal"
+	"github.com/paskal-maksim/gitlab-registry-cleaner/pkg/api"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -43,7 +44,7 @@ func main() {
 	}
 
 	hookSentry, err := logrushooksentry.NewHook(logrushooksentry.Options{
-		Release: internal.GetVersion(),
+		Release: api.GetVersion(),
 	})
 	if err != nil {
 		log.WithError(err).Fatal()

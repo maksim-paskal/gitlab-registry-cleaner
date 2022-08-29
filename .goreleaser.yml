@@ -16,7 +16,7 @@ builds:
   flags:
   - -trimpath
   ldflags:
-  - -X github.com/paskal-maksim/gitlab-registry-cleaner/internal.version={{.Version}}-{{.ShortCommit}}-{{.Timestamp}}
+  - -X github.com/paskal-maksim/gitlab-registry-cleaner/api.version={{.Version}}-{{.ShortCommit}}-{{.Timestamp}}
   goos:
   - linux
   goarch:

@@ -113,8 +113,8 @@ func (p *Provider) Tags(repository string) ([]string, error) {
 }
 
 // Delete tag.
-func (p *Provider) DeleteTag(repository string, tag string, tagType types.TagType) error {
-	digest, err := p.hub.ManifestDigest(repository, tag)
+func (p *Provider) DeleteTag(deleteTag types.DeleteTagInput) error {
+	digest, err := p.hub.ManifestDigest(deleteTag.Repository, deleteTag.Tag)
 	if err != nil {
 		return errors.Wrap(err, "can not get digest")
 	}
@@ -125,9 +125,9 @@ func (p *Provider) DeleteTag(repository string, tag string, tagType types.TagTyp
 		return nil
 	}
 
-	err = p.hub.DeleteManifest(repository, digest)
+	err = p.hub.DeleteManifest(deleteTag.Repository, digest)
 	if err != nil {
-		return errors.Wrapf(err, "can not delete repository manifest %s:%s (%s)", repository, tag, digest)
+		return errors.Wrapf(err, "can not delete repository manifest %s:%s (%s)", deleteTag.Repository, deleteTag.Tag, digest)
 	}
 
 	return nil

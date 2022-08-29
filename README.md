@@ -88,3 +88,21 @@ release-20220221 # will be removed
 `gitlab-registry-cleaner` will leave only last 10 day of release tags
 
 ### 2. If docker registry tag exists and there if no git tag (branch was merged to main branch) - docker tag will be removed
+
+## Clearing docker snapshots tags
+
+in registry can be stored database snapshots, so we need to remove old snapshots also
+
+default path in registry `devops/docker/mysql-.+` for snapshots
+
+```bash
+20210316-snap # will be removed
+20210421-snap # will be removed
+20210504-snap # will be removed
+20211117-snap # will be removed
+20220331-snap # will be removed
+20220415-snap # will be removed
+20220606-snap
+20220615-snap
+20220809-snap
+```

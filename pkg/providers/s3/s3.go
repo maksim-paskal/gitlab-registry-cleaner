@@ -184,8 +184,8 @@ func (p *Provider) Tags(repository string) ([]string, error) {
 	return tags, nil
 }
 
-func (p *Provider) DeleteTag(repository string, tag string, tagType types.TagType) error {
-	p.deletefolders[fmt.Sprintf("%s%s/_manifests/tags/%s/", *registryFolder, repository, tag)] = true
+func (p *Provider) DeleteTag(deleteTag types.DeleteTagInput) error {
+	p.deletefolders[fmt.Sprintf("%s%s/_manifests/tags/%s/", *registryFolder, deleteTag.Repository, deleteTag.Tag)] = true
 
 	return nil
 }

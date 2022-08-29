@@ -36,7 +36,7 @@ var pushGateWayServer = httptest.NewServer(http.HandlerFunc(func(writer http.Res
 }))
 
 func checkPushGatewayResponse(req *http.Request) error {
-	if req.Method != "PUT" {
+	if req.Method != http.MethodPut {
 		return errors.Errorf("request method %s not correct", req.Method)
 	}
 
