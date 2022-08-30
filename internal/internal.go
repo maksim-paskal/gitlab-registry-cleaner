@@ -17,10 +17,8 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
-	"sort"
-	"strings"
-	"time"
 
+	"github.com/paskal-maksim/gitlab-registry-cleaner/pkg/api"
 	"github.com/paskal-maksim/gitlab-registry-cleaner/pkg/gitlab"
 	"github.com/paskal-maksim/gitlab-registry-cleaner/pkg/metrics"
 	"github.com/paskal-maksim/gitlab-registry-cleaner/pkg/providers/docker"
@@ -33,30 +31,35 @@ import (
 )
 
 const (
-	hoursInDay                     = 24
-	defaultReleaseNotDeleteDays    = 10
-	defaultMinNotDeleteReleaseTags = 3
-	slashesInDockerRegistryPath    = 3
+	defaultNotDeleteDays    = 10
+	defaultMinNotDeleteTags = 3
 )
 
 var (
-	provider                = flag.String("provider", "docker", "")
-	dryRun                  = flag.Bool("dry-run", false, "")
-	releaseTagPattern       = flag.String("release.tag", `^release-(\d{4}\d{2}\d{2}).*$`, "")
-	systemTagPattern        = flag.String("system.tag", `^main$|^master$`, "")
-	ignoreRepositoryPattern = flag.String("ignoreTags", `^devops/docker$`, "")
-	releaseNotDeleteDays    = flag.Float64("release.daysNotDelete", defaultReleaseNotDeleteDays, "")
-	minNotDeleteReleaseTags = flag.Int("release.minTags", defaultMinNotDeleteReleaseTags, "")
+	provider                  = flag.String("provider", "docker", "")
+	dryRun                    = flag.Bool("dry-run", false, "")
+	snapshotEnabled           = flag.Bool("snapshots", false, "enable snapshot clearing")
+	snapshotRepositoryPattern = flag.String("snapshot.repository", `^devops/docker/mysql-.+$`, "")
+	snapshotTagPattern        = flag.String("snapshot.tag", `^(\d{8})-snap$`, "")
+	snapshotNotDeleteDays     = flag.Float64("snapshot.daysNotDelete", defaultNotDeleteDays, "")
+	minNotDeleteSnapshotTags  = flag.Int("snapshot.minTags", defaultMinNotDeleteTags, "")
+	releaseTagPattern         = flag.String("release.tag", `^release-(\d{8}).*$`, "")
+	systemTagPattern          = flag.String("system.tag", `^main$|^master$`, "")
+	ignoreRepositoryPattern   = flag.String("ignoreTags", `^devops/docker$`, "")
+	releaseNotDeleteDays      = flag.Float64("release.daysNotDelete", defaultNotDeleteDays, "")
+	minNotDeleteReleaseTags   = flag.Int("release.minTags", defaultMinNotDeleteTags, "")
 )
 
 var (
-	releaseTagRegexp       = regexp.MustCompile(*releaseTagPattern)
-	systemTagRegexp        = regexp.MustCompile(*systemTagPattern)
-	ignoreRepositoryRegexp = regexp.MustCompile(*ignoreRepositoryPattern)
+	releaseTagRegexp         = regexp.MustCompile(*releaseTagPattern)
+	systemTagRegexp          = regexp.MustCompile(*systemTagPattern)
+	ignoreRepositoryRegexp   = regexp.MustCompile(*ignoreRepositoryPattern)
+	snapshotRepositoryRegexp = regexp.MustCompile(*snapshotRepositoryPattern)
+	snapshotTagRegexp        = regexp.MustCompile(*snapshotTagPattern)
 )
 
 // Run main logic.
-func Run() error { //nolint:funlen,gocognit,cyclop,gocyclo
+func Run() error { //nolint:funlen,cyclop
 	// Login to gitlab
 	if err := gitlab.Init(); err != nil {
 		log.Fatal(err)
@@ -73,7 +76,7 @@ func Run() error { //nolint:funlen,gocognit,cyclop,gocyclo
 		return errors.Errorf("%s unknown provider", *provider)
 	}
 
-	log.Infof("Starting %s %s...", filepath.Base(os.Args[0]), GetVersion())
+	log.Infof("Starting %s %s...", filepath.Base(os.Args[0]), api.GetVersion())
 	log.Infof("Using %s provider...", *provider)
 
 	// Login to registry
@@ -81,109 +84,37 @@ func Run() error { //nolint:funlen,gocognit,cyclop,gocyclo
 		return errors.Wrap(err, "can not init registry")
 	}
 
+	// get all docker repository
 	repositories, err := registry.Repositories()
 	if err != nil {
 		return errors.Wrap(err, "can not list repositories")
 	}
 
-	gitlabProjects := make(map[string][]string)
+	tagsToDelete := make([]types.DeleteTagInput, 0)
 
-	// Convert docker path to gitlab project path
-	for _, repo := range repositories {
-		log.Debug("docker repositories", repo)
-
-		gitlabProjectPath, err := GetGitlabProjectPath(repo)
-		if err != nil {
-			log.WithError(err).Warn()
-			metrics.TagsWarnings.Inc()
-
-			continue
-		}
-
-		// ignore some projects
-		if ignoreRepositoryRegexp.MatchString(gitlabProjectPath) {
-			continue
-		}
-
-		// create unique gitlab projects
-		if gitlabProjects[gitlabProjectPath] == nil {
-			gitlabProjects[gitlabProjectPath] = []string{repo}
-		} else {
-			gitlabProjects[gitlabProjectPath] = append(gitlabProjects[gitlabProjectPath], repo)
-		}
+	// get stalled docker tags
+	staledDockerTags, err := getStaleDockerTags(registry, repositories)
+	if err != nil {
+		return errors.Wrap(err, "can not get staled docker tags")
 	}
 
-	// For all gitlab project list branch and detect stale docker tag
-	for gitlabRepo, dockerRepos := range gitlabProjects {
-		gitlabProjectID, err := gitlab.GetProjectID(gitlabRepo)
+	tagsToDelete = append(tagsToDelete, staledDockerTags...)
+
+	// get staled snapshot tags
+	if *snapshotEnabled {
+		tagsToDelete = append(tagsToDelete, getStaledSnashotsTags(registry, repositories)...)
+	}
+
+	// delete tags from registry
+	for _, tag := range tagsToDelete {
+		metrics.TagsDeleted.Inc()
+		log.Infof("delete image=%s:%s reason=%s", tag.Repository, tag.Tag, tag.TagType.String())
+
+		// tag will be removed
+		err := registry.DeleteTag(tag)
 		if err != nil {
-			log.WithError(err).Error(gitlabRepo)
-
-			continue
-		}
-
-		log.Debugf("gitlab repositories %s %d %v", gitlabRepo, gitlabProjectID, dockerRepos)
-
-		projectBranches, err := gitlab.GetProjectBranches(gitlabProjectID)
-		if err != nil {
-			return errors.Wrap(err, "can not get branches")
-		}
-
-		projectAllDockerTags := make(map[string]types.TagType)
-
-		// Get docker tags
-		for _, dockerRepo := range dockerRepos {
-			dockerTags, _ := registry.Tags(dockerRepo)
-			for _, dockerTag := range dockerTags {
-				projectAllDockerTags[dockerTag] = types.CanNotDelete
-			}
-		}
-
-		tagsNotToDelete := GetNotDeletableReleaseTags(projectAllDockerTags)
-
-		// Calculate tags to delete
-		for projectAllDockerTag, tagType := range projectAllDockerTags {
-			if branchStale, ok := projectBranches[projectAllDockerTag]; ok {
-				if branchStale {
-					tagType = types.BranchStale
-				}
-			} else {
-				tagType = types.BranchNotFound
-			}
-
-			if releaseTagRegexp.MatchString(projectAllDockerTag) {
-				if utils.StringInSlice(projectAllDockerTag, tagsNotToDelete) {
-					tagType = types.ReleaseTagCanNotDelete
-				} else {
-					tagType = types.ReleaseTag
-				}
-			}
-
-			if systemTagRegexp.MatchString(projectAllDockerTag) {
-				tagType = types.SystemTag
-			}
-
-			projectAllDockerTags[projectAllDockerTag] = tagType
-		}
-
-		// List all tags
-		for _, dockerRepo := range dockerRepos {
-			dockerTags, _ := registry.Tags(dockerRepo)
-			for _, dockerTag := range dockerTags {
-				tagType := projectAllDockerTags[dockerTag]
-
-				if tagType == types.ReleaseTag || tagType == types.BranchNotFound || tagType == types.BranchStale {
-					metrics.TagsDeleted.Inc()
-					log.Infof("delete image=%s:%s reason=%s", dockerRepo, dockerTag, tagType.String())
-
-					// tag will be removed
-					err := registry.DeleteTag(dockerRepo, dockerTag, tagType)
-					if err != nil {
-						metrics.TagsErrors.Inc()
-						log.WithError(err).Errorf("%s:%s reason=%s", dockerRepo, dockerTag, tagType.String())
-					}
-				}
-			}
+			metrics.TagsErrors.Inc()
+			log.WithError(err).Errorf("%s:%s reason=%s", tag.Repository, tag.Tag, tag.TagType.String())
 		}
 	}
 
@@ -223,87 +154,151 @@ func Run() error { //nolint:funlen,gocognit,cyclop,gocyclo
 	return nil
 }
 
-// Convert docker registry path to gitlab path.
-func GetGitlabProjectPath(dockerRegistryPath string) (string, error) {
-	pathGroups := strings.Split(dockerRegistryPath, "/")
+// get staled docker tags to delete from docker registry.
+func getStaleDockerTags(registry types.Provider, repositories []string) ([]types.DeleteTagInput, error) { //nolint:funlen,gocognit,lll,cyclop
+	tagsToDelete := make([]types.DeleteTagInput, 0)
+	gitlabProjects := make(map[string][]string)
 
-	if len(pathGroups) < slashesInDockerRegistryPath {
-		return "", errors.Errorf("path %s must contain group/project/image path", dockerRegistryPath)
+	// Convert docker path to gitlab project path
+	for _, repo := range repositories {
+		log.Debug("docker repositories", repo)
+
+		gitlabProjectPath, err := api.GetGitlabProjectPath(repo)
+		if err != nil {
+			log.WithError(err).Warn()
+			metrics.TagsWarnings.Inc()
+
+			continue
+		}
+
+		// ignore some projects
+		if ignoreRepositoryRegexp.MatchString(gitlabProjectPath) {
+			continue
+		}
+
+		// create unique gitlab projects
+		if gitlabProjects[gitlabProjectPath] == nil {
+			gitlabProjects[gitlabProjectPath] = []string{repo}
+		} else {
+			gitlabProjects[gitlabProjectPath] = append(gitlabProjects[gitlabProjectPath], repo)
+		}
 	}
 
-	if len(pathGroups) > 0 {
-		pathGroups = pathGroups[:len(pathGroups)-1]
+	// For all gitlab project list branch and detect stale docker tag
+	for gitlabRepo, dockerRepos := range gitlabProjects {
+		gitlabProjectID, err := gitlab.GetProjectID(gitlabRepo)
+		if err != nil {
+			log.WithError(err).Error(gitlabRepo)
+
+			continue
+		}
+
+		log.Debugf("gitlab repositories %s %d %v", gitlabRepo, gitlabProjectID, dockerRepos)
+
+		projectBranches, err := gitlab.GetProjectBranches(gitlabProjectID)
+		if err != nil {
+			return tagsToDelete, errors.Wrap(err, "can not get branches")
+		}
+
+		projectAllDockerTags := make(map[string]types.TagType)
+
+		// Get docker tags
+		for _, dockerRepo := range dockerRepos {
+			dockerTags, _ := registry.Tags(dockerRepo)
+			for _, dockerTag := range dockerTags {
+				projectAllDockerTags[dockerTag] = types.CanNotDelete
+			}
+		}
+
+		tagsNotToDelete := api.GetNotDeletableTags(&api.GetNotDeletableTagsInput{
+			Tags:             projectAllDockerTags,
+			DateRegexp:       releaseTagRegexp,
+			NotDeleteDays:    *releaseNotDeleteDays,
+			MinNotDeleteTags: *minNotDeleteReleaseTags,
+		})
+
+		// Calculate tags to delete
+		for projectAllDockerTag, tagType := range projectAllDockerTags {
+			if branchStale, ok := projectBranches[projectAllDockerTag]; ok {
+				if branchStale {
+					tagType = types.BranchStale
+				}
+			} else {
+				tagType = types.BranchNotFound
+			}
+
+			if releaseTagRegexp.MatchString(projectAllDockerTag) {
+				if utils.StringInSlice(projectAllDockerTag, tagsNotToDelete) {
+					tagType = types.ReleaseTagCanNotDelete
+				} else {
+					tagType = types.ReleaseTag
+				}
+			}
+
+			if systemTagRegexp.MatchString(projectAllDockerTag) {
+				tagType = types.SystemTag
+			}
+
+			projectAllDockerTags[projectAllDockerTag] = tagType
+		}
+
+		// List all tags
+		for _, dockerRepo := range dockerRepos {
+			dockerTags, _ := registry.Tags(dockerRepo)
+			for _, dockerTag := range dockerTags {
+				tagType := projectAllDockerTags[dockerTag]
+
+				if tagType == types.ReleaseTag || tagType == types.BranchNotFound || tagType == types.BranchStale {
+					tagsToDelete = append(tagsToDelete, types.DeleteTagInput{
+						Repository: dockerRepo,
+						Tag:        dockerTag,
+						TagType:    tagType,
+					})
+				}
+			}
+		}
 	}
 
-	return strings.Join(pathGroups, "/"), nil
+	return tagsToDelete, nil
 }
 
-// Detect stale release tag.
-func GetNotDeletableReleaseTags(projectAllDockerTags map[string]types.TagType) []string { //nolint:cyclop
-	tagsNotToDelete := make([]string, 0)
-	allReleaseTags := make([]string, 0)
-	releaseMaxDate := time.Time{}
+// get staled snapshots tags to delete from docker registry.
+func getStaledSnashotsTags(registry types.Provider, repositories []string) []types.DeleteTagInput {
+	tagsToDelete := make([]types.DeleteTagInput, 0)
 
-	// Detect max release date
-	for projectAllDockerTag := range projectAllDockerTags {
-		if releaseTagRegexp.MatchString(projectAllDockerTag) {
-			releaseDate, err := time.Parse("20060102", releaseTagRegexp.FindStringSubmatch(projectAllDockerTag)[1])
-			if err != nil {
-				log.WithError(err).Error()
+	for _, dockerRepo := range repositories {
+		if snapshotRepositoryRegexp.MatchString(dockerRepo) {
+			snapshotsDockerTags := make(map[string]types.TagType)
+			dockerTags, _ := registry.Tags(dockerRepo)
 
-				continue
+			// get all repository tags
+			for _, dockerTag := range dockerTags {
+				snapshotsDockerTags[dockerTag] = types.SnapshotStaled
 			}
 
-			if time.Since(releaseDate) < 0 {
-				log.Errorf("release date %s in future - ignore", projectAllDockerTag)
+			tagsNotToDelete := api.GetNotDeletableTags(&api.GetNotDeletableTagsInput{
+				Tags:             snapshotsDockerTags,
+				DateRegexp:       snapshotTagRegexp,
+				NotDeleteDays:    *snapshotNotDeleteDays,
+				MinNotDeleteTags: *minNotDeleteSnapshotTags,
+			})
 
-				continue
+			// Calculate tags to delete
+			for snapshotsDockerTag, tagType := range snapshotsDockerTags {
+				if utils.StringInSlice(snapshotsDockerTag, tagsNotToDelete) {
+					tagType = types.SnapshotTagCanNotDelete
+				}
+
+				if tagType == types.SnapshotStaled {
+					tagsToDelete = append(tagsToDelete, types.DeleteTagInput{
+						Repository: dockerRepo,
+						Tag:        snapshotsDockerTag,
+						TagType:    tagType,
+					})
+				}
 			}
-
-			if releaseDate.After(releaseMaxDate) {
-				releaseMaxDate = releaseDate
-			}
-
-			allReleaseTags = append(allReleaseTags, projectAllDockerTag)
 		}
 	}
 
-	sort.Sort(sort.Reverse(sort.StringSlice(allReleaseTags)))
-
-	// Detect days between tag and maxrelease date
-	// if diff > 10 days - tag will be removed
-	for _, tag := range allReleaseTags {
-		releaseDate, _ := time.Parse("20060102", releaseTagRegexp.FindStringSubmatch(tag)[1])
-
-		releaseDateDiffDays := releaseMaxDate.Sub(releaseDate).Hours() / hoursInDay
-
-		log.Debugf("%s, datediff=%f", tag, releaseDateDiffDays)
-
-		if releaseDateDiffDays < *releaseNotDeleteDays {
-			tagsNotToDelete = append(tagsNotToDelete, tag)
-		}
-	}
-
-	// leave last 3 tags if final tagsNotToDelete is less of this amount
-	if len(tagsNotToDelete) < *minNotDeleteReleaseTags {
-		latestTags := make([]string, 0)
-		for i := 0; i < len(allReleaseTags); i++ {
-			latestTags = append(latestTags, allReleaseTags[i])
-
-			if (len(latestTags)) >= *minNotDeleteReleaseTags {
-				break
-			}
-		}
-
-		tagsNotToDelete = latestTags
-	}
-
-	return tagsNotToDelete
-}
-
-var version = "dev"
-
-// Get application version.
-func GetVersion() string {
-	return version
+	return tagsToDelete
 }

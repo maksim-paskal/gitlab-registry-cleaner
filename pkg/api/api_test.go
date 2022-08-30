@@ -10,16 +10,35 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
-package internal_test
+package api_test
 
 import (
 	"reflect"
+	"regexp"
 	"sort"
 	"testing"
 
-	"github.com/paskal-maksim/gitlab-registry-cleaner/internal"
+	"github.com/paskal-maksim/gitlab-registry-cleaner/pkg/api"
 	"github.com/paskal-maksim/gitlab-registry-cleaner/pkg/types"
 )
+
+func newReleaseInput(tags map[string]types.TagType) *api.GetNotDeletableTagsInput {
+	return &api.GetNotDeletableTagsInput{
+		Tags:             tags,
+		DateRegexp:       regexp.MustCompile(`^release-(\d{8}).*$`),
+		NotDeleteDays:    10,
+		MinNotDeleteTags: 3,
+	}
+}
+
+func newSnapshotnput(tags map[string]types.TagType) *api.GetNotDeletableTagsInput {
+	return &api.GetNotDeletableTagsInput{
+		Tags:             tags,
+		DateRegexp:       regexp.MustCompile(`^(\d{8})-snap$`),
+		NotDeleteDays:    10,
+		MinNotDeleteTags: 3,
+	}
+}
 
 func TestGetGitlabProjectPath(t *testing.T) {
 	t.Parallel()
@@ -31,7 +50,7 @@ func TestGetGitlabProjectPath(t *testing.T) {
 	tests["#@/#@/&&"] = "#@/#@"
 
 	for in, out := range tests {
-		result, err := internal.GetGitlabProjectPath(in)
+		result, err := api.GetGitlabProjectPath(in)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -48,7 +67,7 @@ func TestGetGitlabProjectPath(t *testing.T) {
 	}
 
 	for _, test := range testsToFail {
-		_, err := internal.GetGitlabProjectPath(test)
+		_, err := api.GetGitlabProjectPath(test)
 		if err == nil {
 			t.Fatal("must throw error")
 		}
@@ -74,7 +93,7 @@ func TestGetNotDeletableReleaseTagsFrequent(t *testing.T) {
 	tags["test-branch"] = types.ReleaseTag          // fake tag
 	tags["test-20220318-branch"] = types.ReleaseTag // fake tag
 
-	result := internal.GetNotDeletableReleaseTags(tags)
+	result := api.GetNotDeletableTags(newReleaseInput(tags))
 
 	need := []string{
 		"release-20220320",
@@ -83,6 +102,39 @@ func TestGetNotDeletableReleaseTagsFrequent(t *testing.T) {
 		"release-20220319-patch2",
 		"release-20220318-test",
 		"release-20220311",
+	}
+
+	sort.Strings(need)
+	sort.Strings(result)
+
+	if !reflect.DeepEqual(result, need) {
+		t.Fatalf("tags not equals result=%v", result)
+	}
+}
+
+func TestGetNotDeletableSnapshotTags(t *testing.T) {
+	t.Parallel()
+
+	tags := make(map[string]types.TagType)
+
+	tags["20210316-snap"] = types.CanNotDelete
+	tags["20210421-snap"] = types.CanNotDelete
+	tags["20210504-snap"] = types.CanNotDelete
+	tags["20211117-snap"] = types.CanNotDelete
+	tags["20220331-snap"] = types.CanNotDelete
+	tags["20220415-snap"] = types.CanNotDelete
+	tags["20220606-snap"] = types.CanNotDelete
+	tags["20220615-snap"] = types.CanNotDelete
+	tags["20220809-snap"] = types.CanNotDelete
+	tags["20228899-snap"] = types.CanNotDelete // fake date
+	tags["90228809-snap"] = types.CanNotDelete // date in future
+
+	result := api.GetNotDeletableTags(newSnapshotnput(tags))
+
+	need := []string{
+		"20220809-snap",
+		"20220615-snap",
+		"20220606-snap",
 	}
 
 	sort.Strings(need)
@@ -103,7 +155,7 @@ func TestGetNotDeletableReleaseTagsRare(t *testing.T) {
 	tags["release-20220118"] = types.ReleaseTag
 	tags["release-20211217"] = types.ReleaseTag
 
-	result := internal.GetNotDeletableReleaseTags(tags)
+	result := api.GetNotDeletableTags(newReleaseInput(tags))
 
 	need := []string{
 		"release-20220320",
@@ -122,7 +174,7 @@ func TestGetNotDeletableReleaseTagsRare(t *testing.T) {
 func TestVersion(t *testing.T) {
 	t.Parallel()
 
-	if version := internal.GetVersion(); version != "dev" {
+	if version := api.GetVersion(); version != "dev" {
 		t.Fatalf("version %s is incorrect", version)
 	}
 }

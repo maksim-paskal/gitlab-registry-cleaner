@@ -10,3 +10,8 @@ linters:
   - exhaustruct
   - gochecknoglobals
   - gomoddirectives
+
+linters-settings:
+  misspell:
+    locale: US
+    ignore-words: []

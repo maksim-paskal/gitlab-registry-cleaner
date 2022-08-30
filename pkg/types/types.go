@@ -12,36 +12,28 @@ limitations under the License.
 */
 package types
 
-type TagType uint32
+type TagType string
 
 func (t TagType) String() string {
-	switch t {
-	case CanNotDelete:
-		return "CanNotDelete"
-	case BranchNotFound:
-		return "BranchNotFound"
-	case ReleaseTagCanNotDelete:
-		return "ReleaseTagCanNotDelete"
-	case ReleaseTag:
-		return "ReleaseTag"
-	case SystemTag:
-		return "SystemTag"
-	case BranchStale:
-		return "BranchStale"
-	}
-
-	return "unknown"
+	return string(t)
 }
 
 const (
-	CanNotDelete TagType = iota
-	BranchNotFound
-	ReleaseTagCanNotDelete
-	ReleaseTag
-	SystemTag
-	BranchStale
+	CanNotDelete            TagType = "CanNotDelete"
+	BranchNotFound          TagType = "BranchNotFound"
+	ReleaseTagCanNotDelete  TagType = "ReleaseTagCanNotDelete"
+	ReleaseTag              TagType = "ReleaseTag"
+	SystemTag               TagType = "SystemTag"
+	BranchStale             TagType = "BranchStale"
+	SnapshotTagCanNotDelete TagType = "SnapshotTagCanNotDelete"
+	SnapshotStaled          TagType = "SnapshotStaled"
 )
 
+type DeleteTagInput struct {
+	Repository string
+	Tag        string
+	TagType    TagType
+}
 type Provider interface {
 	// Initialize provider
 	Init(dryRun bool) error
@@ -50,7 +42,7 @@ type Provider interface {
 	// List tags in provider
 	Tags(repository string) ([]string, error)
 	// Delete tag
-	DeleteTag(repository string, tag string, tagType TagType) error
+	DeleteTag(deleteTag DeleteTagInput) error
 	// Run post commands in provider
 	PostCommand() error
 }

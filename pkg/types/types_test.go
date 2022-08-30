@@ -29,7 +29,6 @@ func TestTagType(t *testing.T) {
 	tests[types.ReleaseTag] = "ReleaseTag"
 	tests[types.SystemTag] = "SystemTag"
 	tests[types.BranchStale] = "BranchStale"
-	tests[10000000] = "unknown"
 
 	for in, out := range tests {
 		result := in.String()
