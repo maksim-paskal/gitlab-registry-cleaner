@@ -14,6 +14,8 @@ package main
 
 import (
 	"flag"
+	"fmt"
+	"os"
 
 	logrushooksentry "github.com/maksim-paskal/logrus-hook-sentry"
 	"github.com/paskal-maksim/gitlab-registry-cleaner/internal"
@@ -24,10 +26,16 @@ import (
 var (
 	logLevelConfig = flag.String("log.level", "INFO", "")
 	logPretty      = flag.Bool("log.pretty", false, "")
+	version        = flag.Bool("version", false, "")
 )
 
 func main() {
 	flag.Parse()
+
+	if *version {
+		fmt.Println(api.GetVersion()) //nolint:forbidigo
+		os.Exit(0)
+	}
 
 	logLevel, err := log.ParseLevel(*logLevelConfig)
 	if err != nil {
