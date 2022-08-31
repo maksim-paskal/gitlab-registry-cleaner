@@ -1,5 +1,11 @@
-image: paskalmaksim/gitlab-registry-cleaner:latest
-imagePullPolicy: Always
+global:
+  imageRegistry: ""
+
+image:
+  registry: docker.io
+  repository: paskalmaksim/gitlab-registry-cleaner
+  tag: v0.0.5
+  pullPolicy: IfNotPresent
 
 resources:
   requests:
@@ -9,6 +15,7 @@ resources:
 schedule: "0 0 * * *"
 
 args: []
+# - -snapshots
 # - -metrics.pushgateway=http://prometheus-pushgateway.prometheus.svc.cluster.local:9091
 
 env: []

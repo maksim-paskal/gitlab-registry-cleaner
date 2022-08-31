@@ -12,6 +12,9 @@ test:
 coverage:
 	go tool cover -html=coverage.out
 
+lint:
+	ct lint --all
+
 build:
 	git tag -d `git tag -l "helm-chart-*"`
 	go run github.com/goreleaser/goreleaser@latest build --rm-dist --snapshot --skip-validate

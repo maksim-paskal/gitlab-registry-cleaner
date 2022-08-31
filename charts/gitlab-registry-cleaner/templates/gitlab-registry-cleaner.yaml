@@ -14,8 +14,8 @@ spec:
 {{ end }}
           containers:
           - name: gitlab-registry-cleaner
-            image: {{ .Values.image }}
-            imagePullPolicy: {{ .Values.imagePullPolicy }}
+            image: {{ printf "%s/%s:%s" (default .Values.image.registry .Values.global.imageRegistry) .Values.image.repository .Values.image.tag }}
+            imagePullPolicy: {{ .Values.image.pullPolicy }}
             resources:
 {{ toYaml .Values.resources | indent 14 }}
 
