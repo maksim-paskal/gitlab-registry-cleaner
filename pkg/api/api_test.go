@@ -178,3 +178,22 @@ func TestVersion(t *testing.T) {
 		t.Fatalf("version %s is incorrect", version)
 	}
 }
+
+func TestGetTagWithoutArch(t *testing.T) {
+	t.Parallel()
+
+	tests := make(map[string]string)
+
+	tests["test1"] = "test1"
+	tests["test2-arm64"] = "test2"
+	tests["test3-amd64"] = "test3"
+
+	tagArch := []string{"amd64", "arm64"}
+
+	for in, out := range tests {
+		result := api.GetTagWithoutArch(in, tagArch)
+		if result != out {
+			t.Fatalf("result %s need %s", result, out)
+		}
+	}
+}
