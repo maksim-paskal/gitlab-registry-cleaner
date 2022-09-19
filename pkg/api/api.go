@@ -13,6 +13,7 @@ limitations under the License.
 package api
 
 import (
+	"fmt"
 	"regexp"
 	"sort"
 	"strings"
@@ -118,4 +119,15 @@ func GetNotDeletableTags(input *GetNotDeletableTagsInput) []string { //nolint:cy
 	}
 
 	return tagsNotToDelete
+}
+
+func GetTagWithoutArch(tagName string, tagArch []string) string {
+	formatedTag := tagName
+
+	for _, arch := range tagArch {
+		suffix := fmt.Sprintf("-%s", arch)
+		formatedTag = strings.TrimSuffix(formatedTag, suffix)
+	}
+
+	return formatedTag
 }
