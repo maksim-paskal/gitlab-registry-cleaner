@@ -14,6 +14,7 @@ package internal
 
 import (
 	"flag"
+	"fmt"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -50,6 +51,9 @@ var (
 	releaseNotDeleteDays      = flag.Float64("release.daysNotDelete", defaultNotDeleteDays, "")
 	minNotDeleteReleaseTags   = flag.Int("release.minTags", defaultMinNotDeleteTags, "")
 	tagArch                   = flag.String("tag.arch", "amd64,arm64", "tag suffix for arch")
+	ciCheck                   = flag.Bool("ci.check", false, "check if release tag is valid")
+	ciTag                     = flag.String("ci.tag", os.Getenv("CI_COMMIT_REF_NAME"), "tag to check")
+	ciCommitDate              = flag.String("ci.commitDate", os.Getenv("CI_COMMIT_TIMESTAMP"), "commit date to check")
 )
 
 var (
@@ -65,6 +69,18 @@ func Run() error { //nolint:funlen,cyclop
 	// Login to gitlab
 	if err := gitlab.Init(); err != nil {
 		log.Fatal(err)
+	}
+
+	if *ciCheck {
+		if err := api.CheckReleaseTag(releaseTagRegexp, *ciTag, *ciCommitDate); err != nil {
+			fmt.Printf("Tag %s is not valid:\n%s", *ciTag, err.Error()) //nolint:forbidigo
+
+			os.Exit(1)
+		}
+
+		fmt.Printf("Tag %s is valid\n", *ciTag) //nolint:forbidigo
+
+		return nil
 	}
 
 	var registry types.Provider

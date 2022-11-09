@@ -13,7 +13,9 @@ limitations under the License.
 package api
 
 import (
+	"flag"
 	"fmt"
+	"math"
 	"regexp"
 	"sort"
 	"strings"
@@ -24,9 +26,12 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
+var checkReleseTagDelta = flag.Int("ci.releases-delta-days", defaultCheckReleseTagDelta, "number of days allowed to be between release tag and commit date") //nolint:lll
+
 const (
 	hoursInDay                  = 24
 	slashesInDockerRegistryPath = 3
+	defaultCheckReleseTagDelta  = 5
 )
 
 var version = "dev"
@@ -59,33 +64,25 @@ type GetNotDeletableTagsInput struct {
 }
 
 // Detect stale tag.
-func GetNotDeletableTags(input *GetNotDeletableTagsInput) []string { //nolint:cyclop
+func GetNotDeletableTags(input *GetNotDeletableTagsInput) []string {
 	tagsNotToDelete := make([]string, 0)
 	allTagDate := make([]string, 0)
 	tagDateMaxDate := time.Time{}
 
 	// Detect max release date
 	for tag := range input.Tags {
-		if input.DateRegexp.MatchString(tag) {
-			tagDate, err := time.Parse("20060102", input.DateRegexp.FindStringSubmatch(tag)[1])
-			if err != nil {
-				log.WithError(err).Error()
+		releaseTag, err := GetReleaseTag(input.DateRegexp, tag)
+		if err != nil {
+			log.WithError(err).Error()
 
-				continue
-			}
-
-			if time.Since(tagDate) < 0 {
-				log.Errorf("release date %s in future - ignore", tag)
-
-				continue
-			}
-
-			if tagDate.After(tagDateMaxDate) {
-				tagDateMaxDate = tagDate
-			}
-
-			allTagDate = append(allTagDate, tag)
+			continue
 		}
+
+		if releaseTag.TagDate.After(tagDateMaxDate) {
+			tagDateMaxDate = releaseTag.TagDate
+		}
+
+		allTagDate = append(allTagDate, tag)
 	}
 
 	sort.Sort(sort.Reverse(sort.StringSlice(allTagDate)))
@@ -93,9 +90,14 @@ func GetNotDeletableTags(input *GetNotDeletableTagsInput) []string { //nolint:cy
 	// Detect days between tag and maxrelease date
 	// if diff > 10 days - tag will be removed
 	for _, tag := range allTagDate {
-		tagDate, _ := time.Parse("20060102", input.DateRegexp.FindStringSubmatch(tag)[1])
+		releaseTag, err := GetReleaseTag(input.DateRegexp, tag)
+		if err != nil {
+			log.WithError(err).Error()
 
-		dateDiffDays := tagDateMaxDate.Sub(tagDate).Hours() / hoursInDay
+			continue
+		}
+
+		dateDiffDays := tagDateMaxDate.Sub(releaseTag.TagDate).Hours() / hoursInDay
 
 		log.Debugf("%s, datediff=%f", tag, dateDiffDays)
 
@@ -130,4 +132,52 @@ func GetTagWithoutArch(tagName string, tagArch []string) string {
 	}
 
 	return formatedTag
+}
+
+type ReleaseTag struct {
+	TagName string
+	TagDate time.Time
+}
+
+func GetReleaseTag(tagNameRegexp *regexp.Regexp, tagName string) (*ReleaseTag, error) {
+	if !tagNameRegexp.MatchString(tagName) {
+		return nil, fmt.Errorf("tag %s doesn't match regexp", tagName) //nolint:goerr113
+	}
+
+	tagDate, err := time.Parse("20060102", tagNameRegexp.FindStringSubmatch(tagName)[1])
+	if err != nil {
+		return nil, errors.Wrap(err, "can not parse date")
+	}
+
+	if time.Since(tagDate) < 0 {
+		return nil, fmt.Errorf("tag date can not be in future") //nolint:goerr113
+	}
+
+	return &ReleaseTag{
+		TagName: tagName,
+		TagDate: tagDate,
+	}, nil
+}
+
+// check if release tag has valid format, date in tag must be +- 5 days from commit date.
+func CheckReleaseTag(tagNameRegexp *regexp.Regexp, tagName string, commitDate string) error {
+	releaseTag, err := GetReleaseTag(tagNameRegexp, tagName)
+	if err != nil {
+		return errors.Wrap(err, "can not get release tag")
+	}
+
+	commitDateTime, err := time.Parse(time.RFC3339, commitDate)
+	if err != nil {
+		return errors.Wrap(err, "parse commit date")
+	}
+
+	commitDateDiff := commitDateTime.Sub(releaseTag.TagDate)
+
+	commitDateDiffDays := math.Abs(commitDateDiff.Hours() / hoursInDay)
+
+	if commitDateDiffDays > float64(*checkReleseTagDelta) {
+		return fmt.Errorf("difference between commit date and release bigger than %d days", *checkReleseTagDelta) //nolint:goerr113,lll
+	}
+
+	return nil
 }
