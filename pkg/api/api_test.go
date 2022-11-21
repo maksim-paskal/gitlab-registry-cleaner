@@ -197,3 +197,77 @@ func TestGetTagWithoutArch(t *testing.T) {
 		}
 	}
 }
+
+func TestCheckReleaseTag(t *testing.T) { //nolint:funlen
+	t.Parallel()
+
+	releaseTagRegexp := regexp.MustCompile(`^release-(\d{8}).*$`)
+
+	type Test struct {
+		Tag             string
+		CommitTimestamp string
+	}
+
+	tests := make([]Test, 0)
+
+	tests = append(tests, Test{
+		Tag:             "release-20220325",
+		CommitTimestamp: "2022-03-21T00:00:00+00:00",
+	})
+
+	tests = append(tests, Test{
+		Tag:             "release-20220320",
+		CommitTimestamp: "2022-03-15T00:00:00+00:00",
+	})
+
+	tests = append(tests, Test{
+		Tag:             "release-20220301",
+		CommitTimestamp: "2022-03-03T00:00:00+00:00",
+	})
+
+	for _, test := range tests {
+		err := api.CheckReleaseTag(releaseTagRegexp, test.Tag, test.CommitTimestamp)
+		if err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	testsFailed := make([]Test, 0)
+
+	// release bigger than 5 days
+	testsFailed = append(testsFailed, Test{
+		Tag:             "release-20220325",
+		CommitTimestamp: "2022-03-31T00:00:00+00:00",
+	})
+
+	// release less than 5 days
+	testsFailed = append(testsFailed, Test{
+		Tag:             "release-20220320",
+		CommitTimestamp: "2022-03-14T00:00:00+00:00",
+	})
+
+	// tag not valid
+	testsFailed = append(testsFailed, Test{
+		Tag:             "drelease-20220111",
+		CommitTimestamp: "2022-03-15T00:00:00+00:00",
+	})
+
+	// tag date not valid
+	testsFailed = append(testsFailed, Test{
+		Tag:             "release-20220144",
+		CommitTimestamp: "2022-03-15T00:00:00+00:00",
+	})
+
+	// release date in future
+	testsFailed = append(testsFailed, Test{
+		Tag:             "release-20990320",
+		CommitTimestamp: "2099-03-19T00:00:00+00:00",
+	})
+
+	for _, test := range testsFailed {
+		err := api.CheckReleaseTag(releaseTagRegexp, test.Tag, test.CommitTimestamp)
+		if err == nil {
+			t.Fatal("error must be " + test.Tag)
+		}
+	}
+}
