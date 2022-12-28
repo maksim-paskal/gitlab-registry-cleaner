@@ -25,6 +25,7 @@ import (
 	"github.com/aws/aws-sdk-go/service/s3"
 	"github.com/aws/aws-sdk-go/service/s3/s3manager"
 	"github.com/paskal-maksim/gitlab-registry-cleaner/pkg/types"
+	"github.com/paskal-maksim/gitlab-registry-cleaner/pkg/utils"
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
 )
@@ -134,7 +135,7 @@ func (p *Provider) Init(dryRun bool) error {
 	return nil
 }
 
-func (p *Provider) Repositories() ([]string, error) {
+func (p *Provider) Repositories(filter string) ([]string, error) {
 	p.repositories = make(map[string]bool)
 
 	if err := p.listRepository(*registryFolder); err != nil {
@@ -145,6 +146,10 @@ func (p *Provider) Repositories() ([]string, error) {
 
 	for repo := range p.repositories {
 		repositories = append(repositories, repo)
+	}
+
+	if len(filter) > 0 {
+		return utils.FilterStrings(repositories, filter), nil
 	}
 
 	return repositories, nil

@@ -117,17 +117,17 @@ func TestGetNotDeletableSnapshotTags(t *testing.T) {
 
 	tags := make(map[string]types.TagType)
 
-	tags["20210316-snap"] = types.CanNotDelete
-	tags["20210421-snap"] = types.CanNotDelete
-	tags["20210504-snap"] = types.CanNotDelete
-	tags["20211117-snap"] = types.CanNotDelete
-	tags["20220331-snap"] = types.CanNotDelete
-	tags["20220415-snap"] = types.CanNotDelete
-	tags["20220606-snap"] = types.CanNotDelete
-	tags["20220615-snap"] = types.CanNotDelete
-	tags["20220809-snap"] = types.CanNotDelete
-	tags["20228899-snap"] = types.CanNotDelete // fake date
-	tags["90228809-snap"] = types.CanNotDelete // date in future
+	tags["20210316-snap"] = types.Unknown
+	tags["20210421-snap"] = types.Unknown
+	tags["20210504-snap"] = types.Unknown
+	tags["20211117-snap"] = types.Unknown
+	tags["20220331-snap"] = types.Unknown
+	tags["20220415-snap"] = types.Unknown
+	tags["20220606-snap"] = types.Unknown
+	tags["20220615-snap"] = types.Unknown
+	tags["20220809-snap"] = types.Unknown
+	tags["20228899-snap"] = types.Unknown // fake date
+	tags["90228809-snap"] = types.Unknown // date in future
 
 	result := api.GetNotDeletableTags(newSnapshotnput(tags))
 

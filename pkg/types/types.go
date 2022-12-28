@@ -19,12 +19,13 @@ func (t TagType) String() string {
 }
 
 const (
-	CanNotDelete            TagType = "CanNotDelete"
+	Unknown                 TagType = "Unknown"
 	BranchNotFound          TagType = "BranchNotFound"
 	ReleaseTagCanNotDelete  TagType = "ReleaseTagCanNotDelete"
 	ReleaseTag              TagType = "ReleaseTag"
 	SystemTag               TagType = "SystemTag"
 	BranchStale             TagType = "BranchStale"
+	BranchNotStaled         TagType = "BranchNotStaled"
 	SnapshotTagCanNotDelete TagType = "SnapshotTagCanNotDelete"
 	SnapshotStaled          TagType = "SnapshotStaled"
 )
@@ -38,7 +39,7 @@ type Provider interface {
 	// Initialize provider
 	Init(dryRun bool) error
 	// List repositories in provider
-	Repositories() ([]string, error)
+	Repositories(filter string) ([]string, error)
 	// List tags in provider
 	Tags(repository string) ([]string, error)
 	// Delete tag

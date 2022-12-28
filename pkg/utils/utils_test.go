@@ -77,3 +77,17 @@ func TestGetEnv(t *testing.T) { //nolint:paralleltest
 		t.Fatal("GetEnv must return fallback")
 	}
 }
+
+func TestFilterStrings(t *testing.T) {
+	t.Parallel()
+
+	arr := []string{"test", "test1", "test2"}
+
+	if len(utils.FilterStrings(arr, "^test$")) != 1 {
+		t.Fatal("FilterStrings must return 1")
+	}
+
+	if len(utils.FilterStrings(arr, "^test.*$")) != 3 {
+		t.Fatal("FilterStrings must return 3")
+	}
+}

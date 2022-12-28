@@ -45,6 +45,7 @@ var (
 	snapshotTagPattern        = flag.String("snapshot.tag", `^(\d{8})-snap$`, "")
 	snapshotNotDeleteDays     = flag.Float64("snapshot.daysNotDelete", defaultNotDeleteDays, "")
 	minNotDeleteSnapshotTags  = flag.Int("snapshot.minTags", defaultMinNotDeleteTags, "")
+	registryFilter            = flag.String("registry.filter", "", "")
 	releaseTagPattern         = flag.String("release.tag", `^release-(\d{8}).*$`, "")
 	systemTagPattern          = flag.String("system.tag", `^main$|^master$`, "")
 	ignoreRepositoryPattern   = flag.String("ignoreTags", `^devops/docker$`, "")
@@ -103,10 +104,12 @@ func Run() error { //nolint:funlen,cyclop
 	}
 
 	// get all docker repository
-	repositories, err := registry.Repositories()
+	repositories, err := registry.Repositories(*registryFilter)
 	if err != nil {
 		return errors.Wrap(err, "can not list repositories")
 	}
+
+	log.Infof("repositories: %v", repositories)
 
 	tagsToDelete := make([]types.DeleteTagInput, 0)
 
@@ -218,13 +221,15 @@ func getStaleDockerTags(registry types.Provider, repositories []string) ([]types
 			return tagsToDelete, errors.Wrap(err, "can not get branches")
 		}
 
+		log.Debugf("projectBranches %v", projectBranches)
+
 		projectAllDockerTags := make(map[string]types.TagType)
 
 		// Get docker tags
 		for _, dockerRepo := range dockerRepos {
 			dockerTags, _ := registry.Tags(dockerRepo)
 			for _, dockerTag := range dockerTags {
-				projectAllDockerTags[dockerTag] = types.CanNotDelete
+				projectAllDockerTags[dockerTag] = types.Unknown
 			}
 		}
 
@@ -238,13 +243,24 @@ func getStaleDockerTags(registry types.Provider, repositories []string) ([]types
 		supportedTagArch := strings.Split(*tagArch, ",")
 
 		// Calculate tags to delete
-		for projectAllDockerTag, tagType := range projectAllDockerTags {
+		for projectAllDockerTag := range projectAllDockerTags {
+			var tagType types.TagType
+
 			// remove arch from docker tag name
 			tagWithoutArch := api.GetTagWithoutArch(projectAllDockerTag, supportedTagArch)
 
 			if branchStale, ok := projectBranches[tagWithoutArch]; ok {
-				if branchStale {
+				if branchStale.Staled {
 					tagType = types.BranchStale
+				} else {
+					tagType = types.BranchNotStaled
+
+					log.Debugf("%s branch %s (%s) has last commit less than %d days",
+						gitlabRepo,
+						branchStale.OriginalBranchName,
+						tagWithoutArch,
+						branchStale.StaledDays,
+					)
 				}
 			} else {
 				tagType = types.BranchNotFound
@@ -262,6 +278,10 @@ func getStaleDockerTags(registry types.Provider, repositories []string) ([]types
 				tagType = types.SystemTag
 			}
 
+			if len(tagType) == 0 {
+				tagType = types.Unknown
+			}
+
 			projectAllDockerTags[projectAllDockerTag] = tagType
 		}
 
@@ -271,12 +291,17 @@ func getStaleDockerTags(registry types.Provider, repositories []string) ([]types
 			for _, dockerTag := range dockerTags {
 				tagType := projectAllDockerTags[dockerTag]
 
-				if tagType == types.ReleaseTag || tagType == types.BranchNotFound || tagType == types.BranchStale {
+				switch tagType { //nolint:exhaustive
+				case types.ReleaseTag, types.BranchNotFound, types.BranchStale:
 					tagsToDelete = append(tagsToDelete, types.DeleteTagInput{
 						Repository: dockerRepo,
 						Tag:        dockerTag,
 						TagType:    tagType,
 					})
+				case types.Unknown:
+					log.Warnf("%s:%s,%s", dockerRepo, dockerTag, tagType)
+				default:
+					log.Infof("%s:%s,%s", dockerRepo, dockerTag, tagType)
 				}
 			}
 		}

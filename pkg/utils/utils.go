@@ -67,3 +67,18 @@ func GetEnv(key, fallback string) string {
 
 	return fallback
 }
+
+// Filter strings array by filter regexp.
+func FilterStrings(list []string, filter string) []string {
+	var result []string
+
+	regexFilter := regexp.MustCompile(filter)
+
+	for _, v := range list {
+		if regexFilter.MatchString(v) {
+			result = append(result, v)
+		}
+	}
+
+	return result
+}
