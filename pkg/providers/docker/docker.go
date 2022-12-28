@@ -99,10 +99,17 @@ func (p *Provider) Init(dryRun bool) error {
 }
 
 // List repositories.
-func (p *Provider) Repositories() ([]string, error) {
+func (p *Provider) Repositories(filter string) ([]string, error) {
 	repos, err := p.hub.Repositories()
+	if err != nil {
+		return nil, errors.Wrap(err, "can not get repositories")
+	}
 
-	return repos, errors.Wrap(err, "can not get repositories")
+	if len(filter) > 0 {
+		return utils.FilterStrings(repos, filter), nil
+	}
+
+	return repos, nil
 }
 
 // List tags.

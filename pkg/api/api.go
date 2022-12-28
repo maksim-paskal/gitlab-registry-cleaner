@@ -73,7 +73,7 @@ func GetNotDeletableTags(input *GetNotDeletableTagsInput) []string {
 	for tag := range input.Tags {
 		releaseTag, err := GetReleaseTag(input.DateRegexp, tag)
 		if err != nil {
-			log.WithError(err).Error()
+			log.WithError(err).Debug("not release tag")
 
 			continue
 		}

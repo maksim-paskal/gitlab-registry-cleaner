@@ -23,12 +23,15 @@ func TestTagType(t *testing.T) {
 
 	tests := make(map[types.TagType]string)
 
-	tests[types.CanNotDelete] = "CanNotDelete"
+	tests[types.Unknown] = "Unknown"
 	tests[types.BranchNotFound] = "BranchNotFound"
 	tests[types.ReleaseTagCanNotDelete] = "ReleaseTagCanNotDelete"
 	tests[types.ReleaseTag] = "ReleaseTag"
 	tests[types.SystemTag] = "SystemTag"
 	tests[types.BranchStale] = "BranchStale"
+	tests[types.BranchNotStaled] = "BranchNotStaled"
+	tests[types.SnapshotTagCanNotDelete] = "SnapshotTagCanNotDelete"
+	tests[types.SnapshotStaled] = "SnapshotStaled"
 
 	for in, out := range tests {
 		result := in.String()

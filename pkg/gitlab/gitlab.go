@@ -28,9 +28,12 @@ var (
 )
 
 const (
+	// max list size for gitlab api.
 	gilabAPIMaxListSize = 100
-	hoursInDay          = 24
-	staleBranchDays     = 100
+	// hours in day.
+	hoursInDay = 24
+	// delete docker tag if last commit more than 30 days ago.
+	staleBranchDays = 30
 )
 
 var git *gitlab.Client
@@ -57,9 +60,15 @@ func GetProjectID(dockerRepo string) (int, error) {
 	return gitlabProject.ID, nil
 }
 
+type GetProjectBranchesResult struct {
+	Staled             bool
+	StaledDays         int
+	OriginalBranchName string
+}
+
 // Return all gitlab branches slugnames with bool stage flag.
-func GetProjectBranches(projectID int) (map[string]bool, error) {
-	result := make(map[string]bool)
+func GetProjectBranches(projectID int) (map[string]*GetProjectBranchesResult, error) {
+	result := make(map[string]*GetProjectBranchesResult)
 
 	currentPage := 0
 
@@ -84,11 +93,16 @@ func GetProjectBranches(projectID int) (map[string]bool, error) {
 			lastCommitHoursAgo := time.Since(*gitBranch.Commit.CommittedDate).Hours()
 			branchSlug := utils.GitlabSluglify(gitBranch.Name)
 
-			if lastCommitHoursAgo > hoursInDay*staleBranchDays {
-				result[branchSlug] = true
-			} else {
-				result[branchSlug] = false
+			item := GetProjectBranchesResult{
+				StaledDays:         staleBranchDays,
+				OriginalBranchName: gitBranch.Name,
 			}
+
+			if lastCommitHoursAgo > hoursInDay*staleBranchDays {
+				item.Staled = true
+			}
+
+			result[branchSlug] = &item
 		}
 	}
 
