@@ -61,6 +61,8 @@ func main() {
 	log.AddHook(hookSentry)
 	defer hookSentry.Stop()
 
+	internal.Init()
+
 	if err := internal.Run(); err != nil {
 		log.WithError(err).Fatal()
 	}
