@@ -4,7 +4,7 @@ global:
 image:
   registry: docker.io
   repository: paskalmaksim/gitlab-registry-cleaner
-  tag: v0.0.6
+  tag: v0.0.7
   pullPolicy: IfNotPresent
 
 resources:
