@@ -41,14 +41,14 @@ var (
 	provider                  = flag.String("provider", "docker", "")
 	dryRun                    = flag.Bool("dry-run", false, "")
 	snapshotEnabled           = flag.Bool("snapshots", false, "enable snapshot clearing")
-	snapshotRepositoryPattern = flag.String("snapshot.repository", `^devops/docker/mysql-.+$`, "")
-	snapshotTagPattern        = flag.String("snapshot.tag", `^(\d{8})-snap$`, "")
+	snapshotRepositoryPattern = flag.String("snapshot.repository", utils.GetEnv("SNAPSHOT_REPOSITORY", `^devops/docker/mysql-.+$`), "") //nolint:lll
+	snapshotTagPattern        = flag.String("snapshot.tag", utils.GetEnv("SNAPSHOT_TAG", `^(\d{8})-snap$`), "")
 	snapshotNotDeleteDays     = flag.Float64("snapshot.daysNotDelete", defaultNotDeleteDays, "")
 	minNotDeleteSnapshotTags  = flag.Int("snapshot.minTags", defaultMinNotDeleteTags, "")
 	registryFilter            = flag.String("registry.filter", "", "")
-	releaseTagPattern         = flag.String("release.tag", `^release-(\d{8}).*$`, "")
-	systemTagPattern          = flag.String("system.tag", `^main$|^master$`, "")
-	ignoreRepositoryPattern   = flag.String("ignoreTags", `^devops/docker$`, "")
+	releaseTagPattern         = flag.String("release.tag", utils.GetEnv("RELEASE_TAG", `^release-(\d{8}).*$`), "")
+	systemTagPattern          = flag.String("system.tag", utils.GetEnv("SYSTEM_TAG", `^(main|master)$`), "")
+	ignoreRepositoryPattern   = flag.String("ignoreTags", utils.GetEnv("IGNORE_TAGS", `^devops/docker$`), "")
 	releaseNotDeleteDays      = flag.Float64("release.daysNotDelete", defaultNotDeleteDays, "")
 	minNotDeleteReleaseTags   = flag.Int("release.minTags", defaultMinNotDeleteTags, "")
 	tagArch                   = flag.String("tag.arch", "amd64,arm64", "tag suffix for arch")
@@ -57,13 +57,19 @@ var (
 	ciCommitDate              = flag.String("ci.commitDate", os.Getenv("CI_COMMIT_TIMESTAMP"), "commit date to check")
 )
 
-var (
-	releaseTagRegexp         = regexp.MustCompile(*releaseTagPattern)
-	systemTagRegexp          = regexp.MustCompile(*systemTagPattern)
-	ignoreRepositoryRegexp   = regexp.MustCompile(*ignoreRepositoryPattern)
+var releaseTagRegexp,
+	systemTagRegexp,
+	ignoreRepositoryRegexp,
+	snapshotRepositoryRegexp,
+	snapshotTagRegexp *regexp.Regexp
+
+func Init() {
+	releaseTagRegexp = regexp.MustCompile(*releaseTagPattern)
+	systemTagRegexp = regexp.MustCompile(*systemTagPattern)
+	ignoreRepositoryRegexp = regexp.MustCompile(*ignoreRepositoryPattern)
 	snapshotRepositoryRegexp = regexp.MustCompile(*snapshotRepositoryPattern)
-	snapshotTagRegexp        = regexp.MustCompile(*snapshotTagPattern)
-)
+	snapshotTagRegexp = regexp.MustCompile(*snapshotTagPattern)
+}
 
 // Run main logic.
 func Run() error { //nolint:funlen,cyclop
