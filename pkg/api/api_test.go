@@ -108,7 +108,7 @@ func TestGetNotDeletableReleaseTagsFrequent(t *testing.T) {
 	sort.Strings(result)
 
 	if !reflect.DeepEqual(result, need) {
-		t.Fatalf("tags not equals result=%v", result)
+		t.Fatalf("tags not equals \n(%v)<=result\n(%v)<=need", result, need)
 	}
 }
 
@@ -141,7 +141,7 @@ func TestGetNotDeletableSnapshotTags(t *testing.T) {
 	sort.Strings(result)
 
 	if !reflect.DeepEqual(result, need) {
-		t.Fatalf("tags not equals result=%v", result)
+		t.Fatalf("tags not equals \n(%v)<=result\n(%v)<=need", result, need)
 	}
 }
 
@@ -151,23 +151,37 @@ func TestGetNotDeletableReleaseTagsRare(t *testing.T) {
 	tags := make(map[string]types.TagType)
 
 	tags["release-20220320"] = types.ReleaseTag
+	tags["release-20220320-amd64"] = types.ReleaseTag
+	tags["release-20220320-arm64"] = types.ReleaseTag
 	tags["release-20220219"] = types.ReleaseTag
+	tags["release-20220219-amd64"] = types.ReleaseTag
+	tags["release-20220219-arm64"] = types.ReleaseTag
 	tags["release-20220118"] = types.ReleaseTag
+	tags["release-20220118-amd64"] = types.ReleaseTag
+	tags["release-20220118-arm64"] = types.ReleaseTag
 	tags["release-20211217"] = types.ReleaseTag
+	tags["release-20211217-amd64"] = types.ReleaseTag
+	tags["release-20211217-arm64"] = types.ReleaseTag
 
 	result := api.GetNotDeletableTags(newReleaseInput(tags))
 
 	need := []string{
 		"release-20220320",
+		"release-20220320-amd64",
+		"release-20220320-arm64",
 		"release-20220219",
+		"release-20220219-amd64",
+		"release-20220219-arm64",
 		"release-20220118",
+		"release-20220118-amd64",
+		"release-20220118-arm64",
 	}
 
 	sort.Strings(need)
 	sort.Strings(result)
 
 	if !reflect.DeepEqual(result, need) {
-		t.Fatalf("tags not equals result=%v", result)
+		t.Fatalf("tags not equals \n(%v)<=result\n(%v)<=need", result, need)
 	}
 }
 
@@ -188,10 +202,8 @@ func TestGetTagWithoutArch(t *testing.T) {
 	tests["test2-arm64"] = "test2"
 	tests["test3-amd64"] = "test3"
 
-	tagArch := []string{"amd64", "arm64"}
-
 	for in, out := range tests {
-		result := api.GetTagWithoutArch(in, tagArch)
+		result := api.GetTagWithoutArch(in)
 		if result != out {
 			t.Fatalf("result %s need %s", result, out)
 		}
@@ -269,5 +281,34 @@ func TestCheckReleaseTag(t *testing.T) { //nolint:funlen
 		if err == nil {
 			t.Fatal("error must be " + test.Tag)
 		}
+	}
+}
+
+func TestGetFormattedTags(t *testing.T) {
+	t.Parallel()
+
+	tags := []string{
+		"main",
+		"release-20221226-1-master",
+		"release-20221226-1-master-amd64",
+		"release-20221226-1-master-arm64",
+		"release-20230106-master",
+		"release-20230106-master-amd64",
+		"release-20230106-master-arm64",
+	}
+
+	result := api.GetTagsWithoutArch(tags)
+
+	need := []string{
+		"release-20221226-1-master",
+		"release-20230106-master",
+		"main",
+	}
+
+	sort.Strings(need)
+	sort.Strings(result)
+
+	if !reflect.DeepEqual(result, need) {
+		t.Fatalf("tags not equals \n(%v)<=result\n(%v)<=need", result, need)
 	}
 }

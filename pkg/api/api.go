@@ -22,11 +22,15 @@ import (
 	"time"
 
 	"github.com/paskal-maksim/gitlab-registry-cleaner/pkg/types"
+	"github.com/paskal-maksim/gitlab-registry-cleaner/pkg/utils"
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
 )
 
-var checkReleseTagDelta = flag.Int("ci.releases-delta-days", defaultCheckReleseTagDelta, "number of days allowed to be between release tag and commit date") //nolint:lll
+var (
+	tagArch             = flag.String("tag.arch", "amd64,arm64", "tag suffix for arch")
+	checkReleseTagDelta = flag.Int("ci.releases-delta-days", defaultCheckReleseTagDelta, "number of days allowed to be between release tag and commit date") //nolint:lll
+)
 
 const (
 	hoursInDay                  = 24
@@ -64,7 +68,7 @@ type GetNotDeletableTagsInput struct {
 }
 
 // Detect stale tag.
-func GetNotDeletableTags(input *GetNotDeletableTagsInput) []string {
+func GetNotDeletableTags(input *GetNotDeletableTagsInput) []string { //nolint:funlen,cyclop
 	tagsNotToDelete := make([]string, 0)
 	allTagDate := make([]string, 0)
 	tagDateMaxDate := time.Time{}
@@ -107,13 +111,26 @@ func GetNotDeletableTags(input *GetNotDeletableTagsInput) []string {
 	}
 
 	// leave last 3 tags if final tagsNotToDelete is less of this amount
-	if len(tagsNotToDelete) < input.MinNotDeleteTags {
-		latestTags := make([]string, 0)
-		for i := 0; i < len(allTagDate); i++ {
-			latestTags = append(latestTags, allTagDate[i])
+	if len(GetTagsWithoutArch(tagsNotToDelete)) < input.MinNotDeleteTags {
+		// to detect latest dates in tags, first we need to remove arch suffix from all tags, add got latest tags
+		allTagDateWOArch := GetTagsWithoutArch(allTagDate)
 
-			if (len(latestTags)) >= input.MinNotDeleteTags {
+		tagsNotToDeleteMinimum := make([]string, 0)
+		for i := 0; i < len(allTagDateWOArch); i++ {
+			tagsNotToDeleteMinimum = append(tagsNotToDeleteMinimum, allTagDateWOArch[i])
+
+			if (len(tagsNotToDeleteMinimum)) >= input.MinNotDeleteTags {
 				break
+			}
+		}
+
+		// than we will find that tags and mark as not deleteble
+		latestTags := make([]string, 0)
+
+		for i := 0; i < len(allTagDate); i++ {
+			tag := GetTagWithoutArch(allTagDate[i])
+			if utils.StringInSlice(tag, tagsNotToDeleteMinimum) {
+				latestTags = append(latestTags, allTagDate[i])
 			}
 		}
 
@@ -123,7 +140,9 @@ func GetNotDeletableTags(input *GetNotDeletableTagsInput) []string {
 	return tagsNotToDelete
 }
 
-func GetTagWithoutArch(tagName string, tagArch []string) string {
+func GetTagWithoutArch(tagName string) string {
+	tagArch := strings.Split(*tagArch, ",")
+
 	formatedTag := tagName
 
 	for _, arch := range tagArch {
@@ -132,6 +151,26 @@ func GetTagWithoutArch(tagName string, tagArch []string) string {
 	}
 
 	return formatedTag
+}
+
+func GetTagsWithoutArch(tags []string) []string {
+	tagArch := strings.Split(*tagArch, ",")
+	result := make([]string, 0)
+
+	for _, tag := range tags {
+		formatedTag := tag
+
+		for _, arch := range tagArch {
+			suffix := fmt.Sprintf("-%s", arch)
+			formatedTag = strings.TrimSuffix(formatedTag, suffix)
+		}
+
+		if !utils.StringInSlice(formatedTag, result) {
+			result = append(result, formatedTag)
+		}
+	}
+
+	return result
 }
 
 type ReleaseTag struct {

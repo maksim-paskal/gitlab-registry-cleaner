@@ -18,7 +18,6 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
-	"strings"
 
 	"github.com/paskal-maksim/gitlab-registry-cleaner/pkg/api"
 	"github.com/paskal-maksim/gitlab-registry-cleaner/pkg/gitlab"
@@ -51,7 +50,6 @@ var (
 	ignoreRepositoryPattern   = flag.String("ignoreTags", utils.GetEnv("IGNORE_TAGS", `^devops/docker$`), "")
 	releaseNotDeleteDays      = flag.Float64("release.daysNotDelete", defaultNotDeleteDays, "")
 	minNotDeleteReleaseTags   = flag.Int("release.minTags", defaultMinNotDeleteTags, "")
-	tagArch                   = flag.String("tag.arch", "amd64,arm64", "tag suffix for arch")
 	ciCheck                   = flag.Bool("ci.check", false, "check if release tag is valid")
 	ciTag                     = flag.String("ci.tag", os.Getenv("CI_COMMIT_REF_NAME"), "tag to check")
 	ciCommitDate              = flag.String("ci.commitDate", os.Getenv("CI_COMMIT_TIMESTAMP"), "commit date to check")
@@ -246,14 +244,12 @@ func getStaleDockerTags(registry types.Provider, repositories []string) ([]types
 			MinNotDeleteTags: *minNotDeleteReleaseTags,
 		})
 
-		supportedTagArch := strings.Split(*tagArch, ",")
-
 		// Calculate tags to delete
 		for projectAllDockerTag := range projectAllDockerTags {
 			var tagType types.TagType
 
 			// remove arch from docker tag name
-			tagWithoutArch := api.GetTagWithoutArch(projectAllDockerTag, supportedTagArch)
+			tagWithoutArch := api.GetTagWithoutArch(projectAllDockerTag)
 
 			if branchStale, ok := projectBranches[tagWithoutArch]; ok {
 				if branchStale.Staled {
