@@ -276,7 +276,7 @@ func getStaleDockerTags(registry types.Provider, repositories []string) ([]types
 				}
 			}
 
-			if systemTagRegexp.MatchString(projectAllDockerTag) {
+			if systemTagRegexp.MatchString(tagWithoutArch) {
 				tagType = types.SystemTag
 			}
 
