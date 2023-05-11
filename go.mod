@@ -16,7 +16,7 @@ require (
 require (
 	github.com/beorn7/perks v1.0.1 // indirect
 	github.com/cespare/xxhash/v2 v2.1.2 // indirect
-	github.com/docker/distribution v0.0.0-20171011171712-7484e51bf6af // indirect
+	github.com/docker/distribution v2.8.2-beta.1+incompatible // indirect
 	github.com/docker/libtrust v0.0.0-20160708172513-aabc10ec26b7 // indirect
 	github.com/getsentry/sentry-go v0.13.0 // indirect
 	github.com/golang/protobuf v1.5.2 // indirect
@@ -26,6 +26,7 @@ require (
 	github.com/jmespath/go-jmespath v0.4.0 // indirect
 	github.com/matttproud/golang_protobuf_extensions v1.0.1 // indirect
 	github.com/opencontainers/go-digest v1.0.0 // indirect
+	github.com/opencontainers/image-spec v1.0.2 // indirect
 	github.com/prometheus/common v0.37.0 // indirect
 	github.com/prometheus/procfs v0.8.0 // indirect
 	golang.org/x/net v0.4.0 // indirect
