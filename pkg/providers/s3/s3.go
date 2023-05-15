@@ -50,9 +50,7 @@ type Provider struct {
 	deletefolders map[string]bool
 }
 
-func (p *Provider) deleteBucketFolder(directory string) error {
-	ctx := context.Background()
-
+func (p *Provider) deleteBucketFolder(ctx context.Context, directory string) error {
 	iter := s3manager.NewDeleteListIterator(p.svc, &s3.ListObjectsInput{
 		Bucket: aws.String(*s3Bucket),
 		Prefix: aws.String(directory),
@@ -65,8 +63,8 @@ func (p *Provider) deleteBucketFolder(directory string) error {
 	return nil
 }
 
-func (p *Provider) listRepository(folder string) error {
-	resp, err := p.svc.ListObjectsV2(&s3.ListObjectsV2Input{
+func (p *Provider) listRepository(ctx context.Context, folder string) error {
+	resp, err := p.svc.ListObjectsV2WithContext(ctx, &s3.ListObjectsV2Input{
 		Bucket:    aws.String(*s3Bucket),
 		Delimiter: aws.String("/"),
 		Prefix:    aws.String(folder),
@@ -95,7 +93,7 @@ func (p *Provider) listRepository(folder string) error {
 			continue
 		}
 
-		if err = p.listRepository(*item.Prefix); err != nil {
+		if err = p.listRepository(ctx, *item.Prefix); err != nil {
 			return errors.Wrap(err, "failed to list objects")
 		}
 	}
@@ -103,7 +101,7 @@ func (p *Provider) listRepository(folder string) error {
 	return nil
 }
 
-func (p *Provider) Init(dryRun bool) error {
+func (p *Provider) Init(_ context.Context, dryRun bool) error {
 	p.dryRun = dryRun
 
 	config := aws.Config{
@@ -135,10 +133,10 @@ func (p *Provider) Init(dryRun bool) error {
 	return nil
 }
 
-func (p *Provider) Repositories(filter string) ([]string, error) {
+func (p *Provider) Repositories(ctx context.Context, filter string) ([]string, error) {
 	p.repositories = make(map[string]bool)
 
-	if err := p.listRepository(*registryFolder); err != nil {
+	if err := p.listRepository(ctx, *registryFolder); err != nil {
 		return nil, errors.Wrap(err, "failed to list objects")
 	}
 
@@ -155,10 +153,10 @@ func (p *Provider) Repositories(filter string) ([]string, error) {
 	return repositories, nil
 }
 
-func (p *Provider) Tags(repository string) ([]string, error) {
+func (p *Provider) Tags(ctx context.Context, repository string) ([]string, error) {
 	tagsFolder := fmt.Sprintf("%s%s/_manifests/tags/", *registryFolder, repository)
 
-	resp, err := p.svc.ListObjectsV2(&s3.ListObjectsV2Input{
+	resp, err := p.svc.ListObjectsV2WithContext(ctx, &s3.ListObjectsV2Input{
 		Bucket:    aws.String(*s3Bucket),
 		Delimiter: aws.String("/"),
 		Prefix:    aws.String(tagsFolder),
@@ -189,18 +187,18 @@ func (p *Provider) Tags(repository string) ([]string, error) {
 	return tags, nil
 }
 
-func (p *Provider) DeleteTag(deleteTag types.DeleteTagInput) error {
+func (p *Provider) DeleteTag(_ context.Context, deleteTag types.DeleteTagInput) error {
 	p.deletefolders[fmt.Sprintf("%s%s/_manifests/tags/%s/", *registryFolder, deleteTag.Repository, deleteTag.Tag)] = true
 
 	return nil
 }
 
-func (p *Provider) PostCommand() error {
+func (p *Provider) PostCommand(ctx context.Context) error {
 	for repo := range p.deletefolders {
 		if p.dryRun {
 			log.Warnf("delete folder %s ", repo)
 		} else {
-			if err := p.deleteBucketFolder(repo); err != nil {
+			if err := p.deleteBucketFolder(ctx, repo); err != nil {
 				return errors.Wrapf(err, "failed to delete folder %s", repo)
 			}
 		}

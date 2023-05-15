@@ -13,6 +13,7 @@ limitations under the License.
 package metrics_test
 
 import (
+	"context"
 	"flag"
 	"io"
 	"net/http"
@@ -71,7 +72,9 @@ func TestPush(t *testing.T) {
 
 	t.Parallel()
 
-	if err := metrics.Push(); err != nil {
+	ctx := context.Background()
+
+	if err := metrics.Push(ctx); err != nil {
 		t.Fatal(err)
 	}
 
@@ -80,7 +83,7 @@ func TestPush(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if err := metrics.Push(); err == nil {
+	if err := metrics.Push(ctx); err == nil {
 		t.Fatal("push must return error")
 	}
 
@@ -89,7 +92,7 @@ func TestPush(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if err := metrics.Push(); err != nil {
+	if err := metrics.Push(ctx); err != nil {
 		t.Fatal("push must return nil")
 	}
 }

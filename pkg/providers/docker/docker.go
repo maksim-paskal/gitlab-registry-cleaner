@@ -73,10 +73,8 @@ func (p *Provider) pingRegistry(ctx context.Context) error {
 }
 
 // Create new client.
-func (p *Provider) Init(dryRun bool) error {
+func (p *Provider) Init(ctx context.Context, dryRun bool) error {
 	p.dryRun = dryRun
-
-	ctx := context.Background()
 
 	if *registryWait {
 		for p.pingRegistry(ctx) != nil {
@@ -99,7 +97,7 @@ func (p *Provider) Init(dryRun bool) error {
 }
 
 // List repositories.
-func (p *Provider) Repositories(filter string) ([]string, error) {
+func (p *Provider) Repositories(_ context.Context, filter string) ([]string, error) {
 	repos, err := p.hub.Repositories()
 	if err != nil {
 		return nil, errors.Wrap(err, "can not get repositories")
@@ -113,14 +111,14 @@ func (p *Provider) Repositories(filter string) ([]string, error) {
 }
 
 // List tags.
-func (p *Provider) Tags(repository string) ([]string, error) {
+func (p *Provider) Tags(_ context.Context, repository string) ([]string, error) {
 	tags, err := p.hub.Tags(repository)
 
 	return tags, errors.Wrap(err, "can not get tags")
 }
 
 // Delete tag.
-func (p *Provider) DeleteTag(deleteTag types.DeleteTagInput) error {
+func (p *Provider) DeleteTag(_ context.Context, deleteTag types.DeleteTagInput) error {
 	digest, err := p.hub.ManifestDigest(deleteTag.Repository, deleteTag.Tag)
 	if err != nil {
 		return errors.Wrap(err, "can not get digest")
@@ -141,7 +139,7 @@ func (p *Provider) DeleteTag(deleteTag types.DeleteTagInput) error {
 }
 
 // Final message.
-func (p *Provider) PostCommand() error {
+func (p *Provider) PostCommand(_ context.Context) error {
 	log.Infof("Done")
 
 	return nil
