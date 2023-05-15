@@ -15,7 +15,7 @@ package utils_test
 import (
 	"testing"
 
-	"github.com/paskal-maksim/gitlab-registry-cleaner/pkg/utils"
+	"github.com/maksim-paskal/gitlab-registry-cleaner/pkg/utils"
 )
 
 func TestGitlabSluglify(t *testing.T) {

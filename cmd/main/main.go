@@ -19,9 +19,9 @@ import (
 	"os"
 	"time"
 
+	"github.com/maksim-paskal/gitlab-registry-cleaner/internal"
+	"github.com/maksim-paskal/gitlab-registry-cleaner/pkg/api"
 	logrushooksentry "github.com/maksim-paskal/logrus-hook-sentry"
-	"github.com/paskal-maksim/gitlab-registry-cleaner/internal"
-	"github.com/paskal-maksim/gitlab-registry-cleaner/pkg/api"
 	log "github.com/sirupsen/logrus"
 )
 

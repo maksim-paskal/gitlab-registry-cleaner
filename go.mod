@@ -1,4 +1,4 @@
-module github.com/paskal-maksim/gitlab-registry-cleaner
+module github.com/maksim-paskal/gitlab-registry-cleaner
 
 go 1.20
 

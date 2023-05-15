@@ -24,8 +24,8 @@ import (
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/s3"
 	"github.com/aws/aws-sdk-go/service/s3/s3manager"
-	"github.com/paskal-maksim/gitlab-registry-cleaner/pkg/types"
-	"github.com/paskal-maksim/gitlab-registry-cleaner/pkg/utils"
+	"github.com/maksim-paskal/gitlab-registry-cleaner/pkg/types"
+	"github.com/maksim-paskal/gitlab-registry-cleaner/pkg/utils"
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
 )

@@ -15,7 +15,7 @@ package types_test
 import (
 	"testing"
 
-	"github.com/paskal-maksim/gitlab-registry-cleaner/pkg/types"
+	"github.com/maksim-paskal/gitlab-registry-cleaner/pkg/types"
 )
 
 func TestTagType(t *testing.T) {

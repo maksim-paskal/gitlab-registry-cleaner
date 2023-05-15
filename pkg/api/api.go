@@ -21,8 +21,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/paskal-maksim/gitlab-registry-cleaner/pkg/types"
-	"github.com/paskal-maksim/gitlab-registry-cleaner/pkg/utils"
+	"github.com/maksim-paskal/gitlab-registry-cleaner/pkg/types"
+	"github.com/maksim-paskal/gitlab-registry-cleaner/pkg/utils"
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
 )

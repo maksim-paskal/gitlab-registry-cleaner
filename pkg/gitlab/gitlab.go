@@ -18,7 +18,7 @@ import (
 	"os"
 	"time"
 
-	"github.com/paskal-maksim/gitlab-registry-cleaner/pkg/utils"
+	"github.com/maksim-paskal/gitlab-registry-cleaner/pkg/utils"
 	"github.com/pkg/errors"
 	"github.com/xanzy/go-gitlab"
 )
