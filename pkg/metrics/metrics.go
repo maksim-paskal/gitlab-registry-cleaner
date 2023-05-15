@@ -13,6 +13,7 @@ limitations under the License.
 package metrics
 
 import (
+	"context"
 	"flag"
 
 	"github.com/pkg/errors"
@@ -53,7 +54,7 @@ var TagsErrors = prometheus.NewCounter(prometheus.CounterOpts{
 })
 
 // Push metrics to pushgateway.
-func Push() error {
+func Push(ctx context.Context) error {
 	if len(*pushGateWayURL) == 0 {
 		return nil
 	}
@@ -65,7 +66,7 @@ func Push() error {
 		Collector(TagsDeleted).
 		Collector(TagsWarnings).
 		Collector(TagsErrors).
-		Push(); err != nil {
+		PushContext(ctx); err != nil {
 		return errors.Wrap(err, "can not send metrics")
 	}
 

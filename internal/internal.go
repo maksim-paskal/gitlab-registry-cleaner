@@ -13,6 +13,7 @@ limitations under the License.
 package internal
 
 import (
+	"context"
 	"flag"
 	"fmt"
 	"os"
@@ -70,7 +71,7 @@ func Init() {
 }
 
 // Run main logic.
-func Run() error { //nolint:funlen,cyclop
+func Run(ctx context.Context) error { //nolint:funlen,cyclop
 	// Login to gitlab
 	if err := gitlab.Init(); err != nil {
 		log.Fatal(err)
@@ -103,12 +104,12 @@ func Run() error { //nolint:funlen,cyclop
 	log.Infof("Using %s provider...", *provider)
 
 	// Login to registry
-	if err := registry.Init(*dryRun); err != nil {
+	if err := registry.Init(ctx, *dryRun); err != nil {
 		return errors.Wrap(err, "can not init registry")
 	}
 
 	// get all docker repository
-	repositories, err := registry.Repositories(*registryFilter)
+	repositories, err := registry.Repositories(ctx, *registryFilter)
 	if err != nil {
 		return errors.Wrap(err, "can not list repositories")
 	}
@@ -118,7 +119,7 @@ func Run() error { //nolint:funlen,cyclop
 	tagsToDelete := make([]types.DeleteTagInput, 0)
 
 	// get stalled docker tags
-	staledDockerTags, err := getStaleDockerTags(registry, repositories)
+	staledDockerTags, err := getStaleDockerTags(ctx, registry, repositories)
 	if err != nil {
 		return errors.Wrap(err, "can not get staled docker tags")
 	}
@@ -127,7 +128,7 @@ func Run() error { //nolint:funlen,cyclop
 
 	// get staled snapshot tags
 	if *snapshotEnabled {
-		tagsToDelete = append(tagsToDelete, getStaledSnashotsTags(registry, repositories)...)
+		tagsToDelete = append(tagsToDelete, getStaledSnashotsTags(ctx, registry, repositories)...)
 	}
 
 	// delete tags from registry
@@ -136,7 +137,7 @@ func Run() error { //nolint:funlen,cyclop
 		log.Infof("delete image=%s:%s reason=%s", tag.Repository, tag.Tag, tag.TagType.String())
 
 		// tag will be removed
-		err := registry.DeleteTag(tag)
+		err := registry.DeleteTag(ctx, tag)
 		if err != nil {
 			metrics.TagsErrors.Inc()
 			log.WithError(err).Errorf("%s:%s reason=%s", tag.Repository, tag.Tag, tag.TagType.String())
@@ -144,7 +145,7 @@ func Run() error { //nolint:funlen,cyclop
 	}
 
 	// Run post commands in registry
-	if err := registry.PostCommand(); err != nil {
+	if err := registry.PostCommand(ctx); err != nil {
 		return errors.Wrap(err, "can not process post command")
 	}
 
@@ -172,7 +173,7 @@ func Run() error { //nolint:funlen,cyclop
 	metrics.CompletionTime.SetToCurrentTime()
 
 	// send metrics to pushgateway
-	if err := metrics.Push(); err != nil {
+	if err := metrics.Push(ctx); err != nil {
 		return errors.Wrap(err, "can not process metrics push")
 	}
 
@@ -180,7 +181,7 @@ func Run() error { //nolint:funlen,cyclop
 }
 
 // get staled docker tags to delete from docker registry.
-func getStaleDockerTags(registry types.Provider, repositories []string) ([]types.DeleteTagInput, error) { //nolint:funlen,gocognit,lll,cyclop
+func getStaleDockerTags(ctx context.Context, registry types.Provider, repositories []string) ([]types.DeleteTagInput, error) { //nolint:funlen,gocognit,lll,cyclop
 	tagsToDelete := make([]types.DeleteTagInput, 0)
 	gitlabProjects := make(map[string][]string)
 
@@ -211,7 +212,7 @@ func getStaleDockerTags(registry types.Provider, repositories []string) ([]types
 
 	// For all gitlab project list branch and detect stale docker tag
 	for gitlabRepo, dockerRepos := range gitlabProjects {
-		gitlabProjectID, err := gitlab.GetProjectID(gitlabRepo)
+		gitlabProjectID, err := gitlab.GetProjectID(ctx, gitlabRepo)
 		if err != nil {
 			log.WithError(err).Error(gitlabRepo)
 
@@ -220,7 +221,7 @@ func getStaleDockerTags(registry types.Provider, repositories []string) ([]types
 
 		log.Debugf("gitlab repositories %s %d %v", gitlabRepo, gitlabProjectID, dockerRepos)
 
-		projectBranches, err := gitlab.GetProjectBranches(gitlabProjectID)
+		projectBranches, err := gitlab.GetProjectBranches(ctx, gitlabProjectID)
 		if err != nil {
 			return tagsToDelete, errors.Wrap(err, "can not get branches")
 		}
@@ -231,7 +232,7 @@ func getStaleDockerTags(registry types.Provider, repositories []string) ([]types
 
 		// Get docker tags
 		for _, dockerRepo := range dockerRepos {
-			dockerTags, _ := registry.Tags(dockerRepo)
+			dockerTags, _ := registry.Tags(ctx, dockerRepo)
 			for _, dockerTag := range dockerTags {
 				projectAllDockerTags[dockerTag] = types.Unknown
 			}
@@ -289,7 +290,7 @@ func getStaleDockerTags(registry types.Provider, repositories []string) ([]types
 
 		// List all tags
 		for _, dockerRepo := range dockerRepos {
-			dockerTags, _ := registry.Tags(dockerRepo)
+			dockerTags, _ := registry.Tags(ctx, dockerRepo)
 			for _, dockerTag := range dockerTags {
 				tagType := projectAllDockerTags[dockerTag]
 
@@ -313,13 +314,13 @@ func getStaleDockerTags(registry types.Provider, repositories []string) ([]types
 }
 
 // get staled snapshots tags to delete from docker registry.
-func getStaledSnashotsTags(registry types.Provider, repositories []string) []types.DeleteTagInput {
+func getStaledSnashotsTags(ctx context.Context, registry types.Provider, repositories []string) []types.DeleteTagInput {
 	tagsToDelete := make([]types.DeleteTagInput, 0)
 
 	for _, dockerRepo := range repositories {
 		if snapshotRepositoryRegexp.MatchString(dockerRepo) {
 			snapshotsDockerTags := make(map[string]types.TagType)
-			dockerTags, _ := registry.Tags(dockerRepo)
+			dockerTags, _ := registry.Tags(ctx, dockerRepo)
 
 			// get all repository tags
 			for _, dockerTag := range dockerTags {

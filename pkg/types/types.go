@@ -12,6 +12,8 @@ limitations under the License.
 */
 package types
 
+import "context"
+
 type TagType string
 
 func (t TagType) String() string {
@@ -37,13 +39,13 @@ type DeleteTagInput struct {
 }
 type Provider interface {
 	// Initialize provider
-	Init(dryRun bool) error
+	Init(ctx context.Context, dryRun bool) error
 	// List repositories in provider
-	Repositories(filter string) ([]string, error)
+	Repositories(ctx context.Context, filter string) ([]string, error)
 	// List tags in provider
-	Tags(repository string) ([]string, error)
+	Tags(ctx context.Context, repository string) ([]string, error)
 	// Delete tag
-	DeleteTag(deleteTag DeleteTagInput) error
+	DeleteTag(ctx context.Context, deleteTag DeleteTagInput) error
 	// Run post commands in provider
-	PostCommand() error
+	PostCommand(ctx context.Context) error
 }

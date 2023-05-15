@@ -13,9 +13,11 @@ limitations under the License.
 package main
 
 import (
+	"context"
 	"flag"
 	"fmt"
 	"os"
+	"time"
 
 	logrushooksentry "github.com/maksim-paskal/logrus-hook-sentry"
 	"github.com/paskal-maksim/gitlab-registry-cleaner/internal"
@@ -28,6 +30,8 @@ var (
 	logPretty      = flag.Bool("log.pretty", false, "")
 	version        = flag.Bool("version", false, "")
 )
+
+const gracefulShutdownTimeout = 5 * time.Second
 
 func main() {
 	flag.Parse()
@@ -61,9 +65,20 @@ func main() {
 	log.AddHook(hookSentry)
 	defer hookSentry.Stop()
 
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	log.RegisterExitHandler(func() {
+		cancel()
+		time.Sleep(gracefulShutdownTimeout)
+	})
+
 	internal.Init()
 
-	if err := internal.Run(); err != nil {
+	if err := internal.Run(ctx); err != nil {
 		log.WithError(err).Fatal()
 	}
+
+	<-ctx.Done()
+	time.Sleep(gracefulShutdownTimeout)
 }

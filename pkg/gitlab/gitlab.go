@@ -13,6 +13,7 @@ limitations under the License.
 package gitlab
 
 import (
+	"context"
 	"flag"
 	"os"
 	"time"
@@ -51,8 +52,11 @@ func Init() error {
 }
 
 // Return project ID on docker repo.
-func GetProjectID(dockerRepo string) (int, error) {
-	gitlabProject, _, err := git.Projects.GetProject(dockerRepo, &gitlab.GetProjectOptions{})
+func GetProjectID(ctx context.Context, dockerRepo string) (int, error) {
+	gitlabProject, _, err := git.Projects.GetProject(
+		dockerRepo,
+		&gitlab.GetProjectOptions{},
+		gitlab.WithContext(ctx))
 	if err != nil {
 		return 0, errors.Wrap(err, dockerRepo)
 	}
@@ -67,20 +71,28 @@ type GetProjectBranchesResult struct {
 }
 
 // Return all gitlab branches slugnames with bool stage flag.
-func GetProjectBranches(projectID int) (map[string]*GetProjectBranchesResult, error) {
+func GetProjectBranches(ctx context.Context, projectID int) (map[string]*GetProjectBranchesResult, error) {
 	result := make(map[string]*GetProjectBranchesResult)
 
 	currentPage := 0
 
 	for {
+		if ctx.Err() != nil {
+			return nil, errors.Wrap(ctx.Err(), "context error")
+		}
+
 		currentPage++
 
-		gitBranches, _, err := git.Branches.ListBranches(projectID, &gitlab.ListBranchesOptions{
-			ListOptions: gitlab.ListOptions{
-				Page:    currentPage,
-				PerPage: gilabAPIMaxListSize,
+		gitBranches, _, err := git.Branches.ListBranches(
+			projectID,
+			&gitlab.ListBranchesOptions{
+				ListOptions: gitlab.ListOptions{
+					Page:    currentPage,
+					PerPage: gilabAPIMaxListSize,
+				},
 			},
-		})
+			gitlab.WithContext(ctx),
+		)
 		if err != nil {
 			return nil, errors.Wrap(err, "can not list branches")
 		}
