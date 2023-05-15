@@ -6,6 +6,10 @@ test:
 	go fmt ./cmd/... ./pkg/... ./internal/...
 	go vet ./cmd/... ./pkg/... ./internal/...
 	go test -race -coverprofile coverage.out ./cmd/... ./pkg/... ./internal/...
+	# test ci check on valid tag
+	CI_COMMIT_REF_NAME=release-20230515-test \
+	CI_COMMIT_TIMESTAMP="2023-05-12T08:56:11Z" \
+	go run ./cmd/main/main.go -ci.check
 	go mod tidy
 	go run github.com/golangci/golangci-lint/cmd/golangci-lint@latest run -v
 
