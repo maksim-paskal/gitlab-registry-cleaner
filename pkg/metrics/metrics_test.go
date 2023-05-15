@@ -21,7 +21,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/paskal-maksim/gitlab-registry-cleaner/pkg/metrics"
+	"github.com/maksim-paskal/gitlab-registry-cleaner/pkg/metrics"
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
 )

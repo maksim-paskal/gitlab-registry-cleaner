@@ -44,7 +44,7 @@ builds:
   flags:
   - -trimpath
   ldflags:
-  - -X github.com/paskal-maksim/gitlab-registry-cleaner/pkg/api.version={{.Version}}-{{.ShortCommit}}-{{.Timestamp}}
+  - -X github.com/maksim-paskal/gitlab-registry-cleaner/pkg/api.version={{.Version}}-{{.ShortCommit}}-{{.Timestamp}}
   goos:
   - linux
   goarch:

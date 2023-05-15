@@ -18,8 +18,8 @@ import (
 	"sort"
 	"testing"
 
-	"github.com/paskal-maksim/gitlab-registry-cleaner/pkg/api"
-	"github.com/paskal-maksim/gitlab-registry-cleaner/pkg/types"
+	"github.com/maksim-paskal/gitlab-registry-cleaner/pkg/api"
+	"github.com/maksim-paskal/gitlab-registry-cleaner/pkg/types"
 )
 
 func newReleaseInput(tags map[string]types.TagType) *api.GetNotDeletableTagsInput {
