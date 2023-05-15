@@ -78,7 +78,4 @@ func main() {
 	if err := internal.Run(ctx); err != nil {
 		log.WithError(err).Fatal()
 	}
-
-	<-ctx.Done()
-	time.Sleep(gracefulShutdownTimeout)
 }
