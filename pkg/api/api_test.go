@@ -16,6 +16,7 @@ import (
 	"reflect"
 	"regexp"
 	"sort"
+	"strings"
 	"testing"
 
 	"github.com/maksim-paskal/gitlab-registry-cleaner/pkg/api"
@@ -304,6 +305,52 @@ func TestGetFormattedTags(t *testing.T) {
 		"release-20230106-master",
 		"main",
 	}
+
+	sort.Strings(need)
+	sort.Strings(result)
+
+	if !reflect.DeepEqual(result, need) {
+		t.Fatalf("tags not equals \n(%v)<=result\n(%v)<=need", result, need)
+	}
+}
+
+func TestGetNotDeletableReleaseTagsRareFrequent(t *testing.T) {
+	t.Parallel()
+
+	tags := make(map[string]types.TagType)
+	need := make([]string, 0)
+
+	gitTags := []string{
+		"release-20230616-2",
+		"release-20230602-4",
+		"release-20230602-patch2",
+		"release-20230602-1",
+		"release-20230602-patch1",
+		"release-20230602",
+		"release-20230602-master2",
+		"release-20230602-master",
+		"release-20230531-4",
+		"release-20230531-1",
+		"release-20230531-3-master",
+		"release-20230526-2",
+		"release-20230526",
+	}
+
+	for _, tag := range gitTags {
+		if strings.HasPrefix(tag, "release-20230616") || strings.HasPrefix(tag, "release-20230602") || strings.HasPrefix(tag, "release-20230531") { //nolint:lll
+			need = append(need, []string{
+				tag,
+				tag + "-amd64",
+				tag + "-arm64",
+			}...)
+		}
+
+		tags[tag] = types.ReleaseTag
+		tags[tag+"-amd64"] = types.ReleaseTag
+		tags[tag+"-arm64"] = types.ReleaseTag
+	}
+
+	result := api.GetNotDeletableTags(newReleaseInput(tags))
 
 	sort.Strings(need)
 	sort.Strings(result)

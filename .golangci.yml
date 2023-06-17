@@ -10,6 +10,7 @@ linters:
   - exhaustruct
   - gochecknoglobals
   - gomoddirectives
+  - depguard
 
 linters-settings:
   misspell:
