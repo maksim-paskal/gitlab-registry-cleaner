@@ -116,12 +116,22 @@ func GetNotDeletableTags(input *GetNotDeletableTagsInput) []string { //nolint:fu
 		allTagDateWOArch := GetTagsWithoutArch(allTagDate)
 
 		tagsNotToDeleteMinimum := make([]string, 0)
-		for i := 0; i < len(allTagDateWOArch); i++ {
-			tagsNotToDeleteMinimum = append(tagsNotToDeleteMinimum, allTagDateWOArch[i])
+		tagsNotToDeleteMinimumDays := make(map[int64]bool)
 
-			if (len(tagsNotToDeleteMinimum)) >= input.MinNotDeleteTags {
+		for _, tagDateWOArch := range allTagDateWOArch {
+			releaseTag, err := GetReleaseTag(input.DateRegexp, tagDateWOArch)
+			if err != nil {
+				log.WithError(err).Error()
+
+				continue
+			}
+
+			tagsNotToDeleteMinimumDays[releaseTag.TagDate.Unix()] = true
+			if (len(tagsNotToDeleteMinimumDays)) > input.MinNotDeleteTags {
 				break
 			}
+
+			tagsNotToDeleteMinimum = append(tagsNotToDeleteMinimum, tagDateWOArch)
 		}
 
 		// than we will find that tags and mark as not deleteble
