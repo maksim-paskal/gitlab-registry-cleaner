@@ -55,7 +55,10 @@ func main() {
 		log.SetFormatter(&log.JSONFormatter{})
 	}
 
-	hookSentry, err := logrushooksentry.NewHook(logrushooksentry.Options{
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	hookSentry, err := logrushooksentry.NewHook(ctx, logrushooksentry.Options{
 		Release: api.GetVersion(),
 	})
 	if err != nil {
@@ -63,10 +66,6 @@ func main() {
 	}
 
 	log.AddHook(hookSentry)
-	defer hookSentry.Stop()
-
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
 
 	log.RegisterExitHandler(func() {
 		cancel()

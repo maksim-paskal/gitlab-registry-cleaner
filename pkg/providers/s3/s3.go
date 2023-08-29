@@ -21,9 +21,11 @@ import (
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/credentials"
+	"github.com/aws/aws-sdk-go/aws/credentials/stscreds"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/s3"
 	"github.com/aws/aws-sdk-go/service/s3/s3manager"
+	"github.com/aws/aws-sdk-go/service/sts"
 	"github.com/maksim-paskal/gitlab-registry-cleaner/pkg/types"
 	"github.com/maksim-paskal/gitlab-registry-cleaner/pkg/utils"
 	"github.com/pkg/errors"
@@ -121,12 +123,21 @@ func (p *Provider) Init(_ context.Context, dryRun bool) error {
 		config.S3ForcePathStyle = aws.Bool(true)
 	}
 
-	sess, err := session.NewSession(&config)
+	sess, err := session.NewSession()
 	if err != nil {
 		return errors.Wrap(err, "failed to create aws session")
 	}
 
-	p.svc = s3.New(sess)
+	if tokenFile, ok := os.LookupEnv("AWS_WEB_IDENTITY_TOKEN_FILE"); ok {
+		config.Credentials = credentials.NewCredentials(stscreds.NewWebIdentityRoleProviderWithOptions(
+			sts.New(sess),
+			os.Getenv("AWS_ROLE_ARN"),
+			"gitlab-registry-cleaner",
+			stscreds.FetchTokenPath(tokenFile),
+		))
+	}
+
+	p.svc = s3.New(sess, &config)
 
 	p.deletefolders = make(map[string]bool)
 
