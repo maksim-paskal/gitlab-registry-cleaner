@@ -15,6 +15,7 @@ spec:
       labels:
         app: registry
     spec:
+      serviceAccountName: {{ .Values.serviceAccount.name }}
 {{ if .Values.registry.tolerations }}
       tolerations:
 {{ toYaml .Values.registry.tolerations | indent 6 }}

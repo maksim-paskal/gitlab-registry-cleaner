@@ -8,6 +8,7 @@ spec:
     spec:
       template:
         spec:
+          serviceAccountName: {{ .Values.serviceAccount.name }}
 {{ if .Values.tolerations }}
           tolerations:
 {{ toYaml .Values.tolerations | indent 10 }}
