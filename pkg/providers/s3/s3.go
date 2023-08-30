@@ -21,11 +21,9 @@ import (
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/credentials"
-	"github.com/aws/aws-sdk-go/aws/credentials/stscreds"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/s3"
 	"github.com/aws/aws-sdk-go/service/s3/s3manager"
-	"github.com/aws/aws-sdk-go/service/sts"
 	"github.com/maksim-paskal/gitlab-registry-cleaner/pkg/types"
 	"github.com/maksim-paskal/gitlab-registry-cleaner/pkg/utils"
 	"github.com/pkg/errors"
@@ -106,9 +104,14 @@ func (p *Provider) listRepository(ctx context.Context, folder string) error {
 func (p *Provider) Init(_ context.Context, dryRun bool) error {
 	p.dryRun = dryRun
 
-	config := aws.Config{
-		Credentials: credentials.NewStaticCredentials(*s3Accesskey, *s3Secretkey, ""),
-		Region:      aws.String(*s3Region),
+	config := aws.Config{}
+
+	if len(*s3Accesskey) > 0 && len(*s3Secretkey) > 0 {
+		config.Credentials = credentials.NewStaticCredentials(*s3Accesskey, *s3Secretkey, "")
+	}
+
+	if len(*s3Region) > 0 {
+		config.Region = aws.String(*s3Region)
 	}
 
 	if len(*s3Endpoint) > 0 {
@@ -126,15 +129,6 @@ func (p *Provider) Init(_ context.Context, dryRun bool) error {
 	sess, err := session.NewSession()
 	if err != nil {
 		return errors.Wrap(err, "failed to create aws session")
-	}
-
-	if tokenFile, ok := os.LookupEnv("AWS_WEB_IDENTITY_TOKEN_FILE"); ok {
-		config.Credentials = credentials.NewCredentials(stscreds.NewWebIdentityRoleProviderWithOptions(
-			sts.New(sess),
-			os.Getenv("AWS_ROLE_ARN"),
-			"gitlab-registry-cleaner",
-			stscreds.FetchTokenPath(tokenFile),
-		))
 	}
 
 	p.svc = s3.New(sess, &config)
