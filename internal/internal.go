@@ -165,9 +165,9 @@ func Run(ctx context.Context) error { //nolint:funlen,cyclop
 	}
 
 	log.Infof("tags deleted %s warnings %s errors %s",
-		tagsDeleted.Counter.String(),
-		tagsWarnings.Counter.String(),
-		tagsErrors.Counter.String(),
+		tagsDeleted.GetCounter().String(),
+		tagsWarnings.GetCounter().String(),
+		tagsErrors.GetCounter().String(),
 	)
 
 	metrics.CompletionTime.SetToCurrentTime()

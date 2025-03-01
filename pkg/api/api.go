@@ -137,7 +137,7 @@ func GetNotDeletableTags(input *GetNotDeletableTagsInput) []string { //nolint:fu
 		// than we will find that tags and mark as not deleteble
 		latestTags := make([]string, 0)
 
-		for i := 0; i < len(allTagDate); i++ {
+		for i := range len(allTagDate) {
 			tag := GetTagWithoutArch(allTagDate[i])
 			if utils.StringInSlice(tag, tagsNotToDeleteMinimum) {
 				latestTags = append(latestTags, allTagDate[i])
@@ -156,7 +156,7 @@ func GetTagWithoutArch(tagName string) string {
 	formatedTag := tagName
 
 	for _, arch := range tagArch {
-		suffix := fmt.Sprintf("-%s", arch)
+		suffix := "-" + arch
 		formatedTag = strings.TrimSuffix(formatedTag, suffix)
 	}
 
@@ -171,7 +171,7 @@ func GetTagsWithoutArch(tags []string) []string {
 		formatedTag := tag
 
 		for _, arch := range tagArch {
-			suffix := fmt.Sprintf("-%s", arch)
+			suffix := "-" + arch
 			formatedTag = strings.TrimSuffix(formatedTag, suffix)
 		}
 
@@ -199,7 +199,7 @@ func GetReleaseTag(tagNameRegexp *regexp.Regexp, tagName string) (*ReleaseTag, e
 	}
 
 	if time.Since(tagDate) < 0 {
-		return nil, fmt.Errorf("tag date can not be in future") //nolint:goerr113
+		return nil, errors.New("tag date can not be in future") //nolint:goerr113
 	}
 
 	return &ReleaseTag{

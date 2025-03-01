@@ -15,7 +15,6 @@ package docker
 import (
 	"context"
 	"flag"
-	"fmt"
 	"net/http"
 	"os"
 	"time"
@@ -49,7 +48,7 @@ func (p *Provider) pingRegistry(ctx context.Context) error {
 		Timeout: pingTimeout,
 	}
 
-	url := fmt.Sprintf("%s/v2/", utils.FormatURL(*registryURL))
+	url := utils.FormatURL(*registryURL) + "/v2/"
 
 	log.Infof("waiting for registry %s", url)
 
