@@ -66,7 +66,7 @@ func TestFormatUrl(t *testing.T) {
 	}
 }
 
-func TestGetEnv(t *testing.T) { //nolint:paralleltest
+func TestGetEnv(t *testing.T) {
 	t.Setenv("TEST_ENV", "test")
 
 	if utils.GetEnv("TEST_ENV", "fake") != "test" {
