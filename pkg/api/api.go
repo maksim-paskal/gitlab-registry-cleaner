@@ -137,7 +137,7 @@ func GetNotDeletableTags(input *GetNotDeletableTagsInput) []string { //nolint:fu
 		// than we will find that tags and mark as not deleteble
 		latestTags := make([]string, 0)
 
-		for i := range len(allTagDate) {
+		for i := range allTagDate {
 			tag := GetTagWithoutArch(allTagDate[i])
 			if utils.StringInSlice(tag, tagsNotToDeleteMinimum) {
 				latestTags = append(latestTags, allTagDate[i])

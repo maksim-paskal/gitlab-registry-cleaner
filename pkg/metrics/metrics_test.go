@@ -13,7 +13,6 @@ limitations under the License.
 package metrics_test
 
 import (
-	"context"
 	"flag"
 	"io"
 	"net/http"
@@ -72,7 +71,7 @@ func TestPush(t *testing.T) {
 
 	t.Parallel()
 
-	ctx := context.Background()
+	ctx := t.Context()
 
 	if err := metrics.Push(ctx); err != nil {
 		t.Fatal(err)
