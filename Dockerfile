@@ -10,8 +10,8 @@ ENV RCLONE_CONFIG_S3_SECRET_ACCESS_KEY=change-it
 ENV RCLONE_CONFIG_S3_REGION=eu-central-1
 
 COPY --from=minio/mc:latest /usr/bin/mc /usr/local/bin
-COPY --from=registry:latest /bin/registry /usr/local/bin
-COPY --from=registry:latest /etc/docker/registry/config.yml /etc/docker/registry/config.yml
+COPY --from=registry:3 /bin/registry /usr/local/bin
+COPY --from=registry:3 /etc/distribution/config.yml /etc/distribution/config.yml
 
 RUN apk upgrade \
 && apk add rclone \
