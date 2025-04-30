@@ -42,7 +42,7 @@ var (
 	dryRun                    = flag.Bool("dry-run", false, "")
 	snapshotEnabled           = flag.Bool("snapshots", false, "enable snapshot clearing")
 	snapshotRepositoryPattern = flag.String("snapshot.repository", utils.GetEnv("SNAPSHOT_REPOSITORY", `^devops/docker/mysql-.+$`), "") //nolint:lll
-	snapshotTagPattern        = flag.String("snapshot.tag", utils.GetEnv("SNAPSHOT_TAG", `^(\d{8})-snap$`), "")
+	snapshotTagPattern        = flag.String("snapshot.tag", utils.GetEnv("SNAPSHOT_TAG", `^(\d{8})-snap(-arm64|-amd64)?$`), "")         //nolint:lll
 	snapshotNotDeleteDays     = flag.Float64("snapshot.daysNotDelete", defaultNotDeleteDays, "")
 	minNotDeleteSnapshotTags  = flag.Int("snapshot.minTags", defaultMinNotDeleteTags, "")
 	registryFilter            = flag.String("registry.filter", "", "")
