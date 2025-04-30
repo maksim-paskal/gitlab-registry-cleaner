@@ -24,17 +24,17 @@ services:
       rclone --quiet sync s3:s3-bucket /var/lib/registry
 
       # run registry in background
-      registry serve /etc/docker/registry/config.yml&
+      registry serve /etc/distribution/config.yml&
       sleep 3
 
       # check current folder with registry
-      registry garbage-collect --dry-run --delete-untagged /etc/docker/registry/config.yml
+      registry garbage-collect --dry-run --delete-untagged /etc/distribution/config.yml
 
       # detect stale docker registry tags 
       /app/gitlab-registry-cleaner
 
       # clean garbage in registry
-      registry garbage-collect --delete-untagged /etc/docker/registry/config.yml
+      registry garbage-collect --delete-untagged /etc/distribution/config.yml
 
       # copy local changes to object storage
       rclone --quiet sync /var/lib/registry s3:s3-bucket

@@ -30,7 +30,7 @@ spec:
             - garbage-collect
             - --dry-run
             - --delete-untagged
-            - /etc/docker/registry/config.yml
+            - /etc/distribution/config.yml
           restartPolicy: Never
       backoffLimit: 3
 {{ end }}
